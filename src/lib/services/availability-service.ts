@@ -333,7 +333,9 @@ export class AvailabilityService {
    */
   static async getAvailabilityForDate(
     therapistId: string,
-    date: Date
+    date: Date,
+    therapistTimezone?: string,
+    clientTimezone?: string
   ): Promise<{
     available: TherapistAvailability[];
     overrides: ScheduleOverride[];
@@ -384,6 +386,43 @@ export class AvailabilityService {
               effectiveSlots = override.affectedSlots;
             }
             break;
+        }
+      }
+
+      // If timezone conversion is needed and timezones are provided
+      if (
+        therapistTimezone &&
+        clientTimezone &&
+        therapistTimezone !== clientTimezone
+      ) {
+        try {
+          const { convertAvailabilityTimeSlots, isSameTimezone } = await import(
+            "@/lib/utils/timezone-utils"
+          );
+
+          // Only convert if timezones are actually different
+          if (!isSameTimezone(therapistTimezone, clientTimezone)) {
+            // Get all time slots to enable conversion
+            const { TimeSlotService } = await import("./timeslot-service");
+            const allTimeSlots = await TimeSlotService.getTimeSlots();
+
+            // Convert effective slots to client timezone
+            const dateString = date.toISOString().split("T")[0];
+            effectiveSlots = convertAvailabilityTimeSlots(
+              effectiveSlots,
+              dateString,
+              therapistTimezone,
+              clientTimezone,
+              allTimeSlots.map((slot) => ({
+                id: slot.id,
+                startTime: slot.startTime,
+                endTime: slot.endTime,
+              }))
+            );
+          }
+        } catch (error) {
+          console.warn("Error converting availability timezone:", error);
+          // Continue with original slots on error
         }
       }
 

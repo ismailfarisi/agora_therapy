@@ -42,9 +42,6 @@ Design enhanced database schema for booking/scheduling system
 Implement therapist profile management components and services
 Build scheduling system with time slots and availability management
 Create appointment booking flow with conflict prevention
-
-subtask remaining
-
 Implement real-time availability updates and synchronization
 Integrate Agora SDK for video session management
 Update Firebase security rules for new collections (if needed)
@@ -61,10 +58,10 @@ Implement Firebase security rules for Firestore collections
 Set up authentication system with Firebase Auth (login, register, role-based routing)
 Create base UI components using Shadcn/UI and Tailwind CSS
 Build user management system (profiles, roles, onboarding)
+Implement therapist profile management with credentials and verification
 
 pending
 
-Implement therapist profile management with credentials and verification
 Create scheduling system with time slots and availability management
 Build appointment booking flow for clients
 Implement real-time availability updates and conflict prevention

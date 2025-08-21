@@ -21,6 +21,7 @@ import {
   or,
   writeBatch,
   runTransaction,
+  FieldValue,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { collections, documents, generateId } from "@/lib/firebase/collections";
@@ -164,7 +165,7 @@ export class AppointmentService {
   }
 
   /**
-   * Check for booking conflicts
+   * Check for booking conflicts with group session support
    */
   static async checkBookingConflicts(
     bookingRequest: BookingRequest
@@ -234,19 +235,75 @@ export class AppointmentService {
         return conflicts;
       }
 
-      // Check for overlapping appointments
-      for (const appointment of existingAppointments) {
-        if (appointment.status === "cancelled") continue;
+      // Get session type limits for group sessions
+      const sessionTypeLimits = {
+        individual: 1,
+        consultation: 1,
+        follow_up: 1,
+        group: 8,
+      };
 
-        const appointmentDate = appointment.scheduledFor.toDate();
-        const isSameDay =
-          appointmentDate.toDateString() === bookingRequest.date.toDateString();
+      const maxConcurrentClients =
+        sessionTypeLimits[bookingRequest.sessionType] || 1;
 
-        if (isSameDay && appointment.timeSlotId === bookingRequest.timeSlotId) {
+      // Check for overlapping appointments with group session support
+      const overlappingAppointments = existingAppointments.filter(
+        (appointment) => {
+          if (appointment.status === "cancelled") return false;
+
+          const appointmentDate = appointment.scheduledFor.toDate();
+          const isSameDay =
+            appointmentDate.toDateString() ===
+            bookingRequest.date.toDateString();
+
+          return (
+            isSameDay && appointment.timeSlotId === bookingRequest.timeSlotId
+          );
+        }
+      );
+
+      if (overlappingAppointments.length > 0) {
+        // For individual sessions, any overlap is a conflict
+        if (bookingRequest.sessionType === "individual") {
+          conflicts.push({
+            type: "overlap",
+            message:
+              "Individual sessions cannot overlap with other appointments",
+            conflictingAppointment: overlappingAppointments[0],
+          });
+        }
+        // For group sessions, check if adding this appointment would exceed limits
+        else if (bookingRequest.sessionType === "group") {
+          // Check if existing appointments are also group sessions
+          const groupAppointments = overlappingAppointments.filter(
+            (apt) => apt.session.type === "group"
+          );
+
+          if (groupAppointments.length > 0) {
+            // Count existing clients in group sessions (assuming 1 client per appointment for now)
+            const existingClientCount = groupAppointments.length;
+
+            if (existingClientCount >= maxConcurrentClients) {
+              conflicts.push({
+                type: "overlap",
+                message: `Group session capacity exceeded. Maximum ${maxConcurrentClients} clients allowed.`,
+                conflictingAppointment: groupAppointments[0],
+              });
+            }
+          } else {
+            // Mixed session types - not allowed
+            conflicts.push({
+              type: "overlap",
+              message: "Cannot book different session types at the same time",
+              conflictingAppointment: overlappingAppointments[0],
+            });
+          }
+        } else {
+          // Other session types with overlap
           conflicts.push({
             type: "overlap",
             message: "This time slot is already booked",
-            conflictingAppointment: appointment,
+            conflictingAppointment: overlappingAppointments[0],
           });
         }
       }
@@ -259,6 +316,47 @@ export class AppointmentService {
     }
 
     return conflicts;
+  }
+
+  /**
+   * Check group session availability and capacity
+   */
+  static async checkGroupSessionAvailability(
+    therapistId: string,
+    timeSlotId: string,
+    date: Date,
+    requestedClients: number = 1
+  ): Promise<{ available: boolean; spotsRemaining: number }> {
+    try {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+
+      const existingAppointments = await this.getAppointmentsInRange(
+        therapistId,
+        startOfDay,
+        endOfDay
+      );
+
+      // Count existing clients in this time slot for group sessions
+      const existingGroupAppointments = existingAppointments.filter(
+        (appt) =>
+          appt.timeSlotId === timeSlotId &&
+          appt.session.type === "group" &&
+          appt.status !== "cancelled"
+      );
+
+      const existingClientCount = existingGroupAppointments.length; // 1 client per appointment
+      const maxCapacity = 8; // Default for group sessions
+      const spotsRemaining = maxCapacity - existingClientCount;
+      const available = spotsRemaining >= requestedClients;
+
+      return { available, spotsRemaining };
+    } catch (error) {
+      console.error("Error checking group session availability:", error);
+      throw new Error("Failed to check group session availability");
+    }
   }
 
   /**
@@ -320,6 +418,12 @@ export class AppointmentService {
           status: "pending",
           session: {
             type: bookingRequest.sessionType,
+            deliveryType: "video" as const, // Default to video for now
+            ...(true && {
+              // Always include video session details for now
+              platform: "agora" as const,
+              channelId: `therapy_session_${appointmentRef.id}`,
+            }),
           },
           payment: {
             amount: therapistProfile.practice.hourlyRate,
@@ -369,7 +473,10 @@ export class AppointmentService {
   ): Promise<void> {
     try {
       const docRef = documents.appointment(appointmentId);
-      const updates: Record<string, any> = {
+      const updates: Record<
+        string,
+        string | Timestamp | FieldValue | undefined
+      > = {
         status,
         "metadata.updatedAt": serverTimestamp(),
       };
@@ -515,6 +622,35 @@ export class AppointmentService {
   }
 
   /**
+   * Subscribe to therapist appointments (real-time)
+   */
+  static subscribeToTherapistAppointments(
+    therapistId: string,
+    callback: (appointments: Appointment[]) => void
+  ): () => void {
+    const q = query(
+      collections.appointments(),
+      where("therapistId", "==", therapistId),
+      orderBy("scheduledFor", "asc")
+    );
+
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const appointments = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Appointment[];
+        callback(appointments);
+      },
+      (error) => {
+        console.error("Error in therapist appointments subscription:", error);
+        callback([]);
+      }
+    );
+  }
+
+  /**
    * Get upcoming appointments
    */
   static async getUpcomingAppointments(
@@ -575,8 +711,14 @@ export class AppointmentService {
       };
 
       appointments.forEach((appointment) => {
-        if (appointment.status in stats) {
-          (stats as any)[appointment.status]++;
+        const status = appointment.status;
+        if (
+          status === "pending" ||
+          status === "confirmed" ||
+          status === "completed" ||
+          status === "cancelled"
+        ) {
+          stats[status]++;
         }
       });
 

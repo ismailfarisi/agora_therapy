@@ -25,6 +25,24 @@ interface RealtimeNotification {
   dismissed?: boolean;
   autoHide?: boolean;
   duration?: number;
+  priority?: "low" | "normal" | "high" | "critical";
+  actionable?: boolean;
+  metadata?: Record<string, unknown>;
+}
+
+interface SyncState {
+  lastSyncTimestamp: Date;
+  pendingSyncs: string[];
+  syncErrors: string[];
+  conflictResolutionQueue: ConflictData[];
+}
+
+interface PerformanceMetrics {
+  averageResponseTime: number;
+  totalOperations: number;
+  failedOperations: number;
+  lastMetricsReset: Date;
+  connectionQuality: "excellent" | "good" | "poor" | "offline";
 }
 
 interface RealtimeState {
@@ -32,47 +50,115 @@ interface RealtimeState {
   connectionStatus: ConnectionStatus;
   isConnected: boolean;
 
-  // Real-time data
-  availabilityUpdates: Map<string, TherapistAvailability[]>; // therapistId -> availability
-  appointmentUpdates: Map<string, Appointment[]>; // userId -> appointments
-  overrideUpdates: Map<string, ScheduleOverride[]>; // therapistId -> overrides
+  // Real-time data with enhanced tracking
+  availabilityUpdates: Map<
+    string,
+    {
+      data: TherapistAvailability[];
+      lastUpdated: Date;
+      version: number;
+      isStale: boolean;
+    }
+  >;
+  appointmentUpdates: Map<
+    string,
+    {
+      data: Appointment[];
+      lastUpdated: Date;
+      version: number;
+      isStale: boolean;
+    }
+  >;
+  overrideUpdates: Map<
+    string,
+    {
+      data: ScheduleOverride[];
+      lastUpdated: Date;
+      version: number;
+      isStale: boolean;
+    }
+  >;
 
-  // Notifications and events
+  // Enhanced notifications and events
   notifications: RealtimeNotification[];
   conflicts: ConflictData[];
   recentEvents: RealtimeEventData[];
 
-  // Settings
+  // Synchronization state
+  syncState: SyncState;
+
+  // Performance monitoring
+  performanceMetrics: PerformanceMetrics;
+
+  // Enhanced settings
   settings: {
     enableNotifications: boolean;
     enableSounds: boolean;
     notificationDuration: number;
     maxRecentEvents: number;
+    enablePersistence: boolean;
+    staleDataThreshold: number; // minutes
+    maxRetryAttempts: number;
+    enablePerformanceMonitoring: boolean;
   };
 
-  // Actions
+  // Enhanced actions
   updateConnectionStatus: (status: ConnectionStatus) => void;
   addNotification: (
     notification: Omit<RealtimeNotification, "id" | "timestamp">
   ) => void;
   dismissNotification: (id: string) => void;
   clearNotifications: () => void;
+  prioritizeNotification: (
+    id: string,
+    priority: RealtimeNotification["priority"]
+  ) => void;
 
   addConflict: (conflict: ConflictData) => void;
-  resolveConflict: (conflictId: string) => void;
+  resolveConflict: (conflictId: string, resolution?: string) => void;
   clearResolvedConflicts: () => void;
+  queueConflictResolution: (conflict: ConflictData) => void;
 
+  // Enhanced data management with versioning and staleness tracking
   updateAvailability: (
     therapistId: string,
-    availability: TherapistAvailability[]
+    availability: TherapistAvailability[],
+    force?: boolean
   ) => void;
-  updateAppointments: (userId: string, appointments: Appointment[]) => void;
-  updateOverrides: (therapistId: string, overrides: ScheduleOverride[]) => void;
+  updateAppointments: (
+    userId: string,
+    appointments: Appointment[],
+    force?: boolean
+  ) => void;
+  updateOverrides: (
+    therapistId: string,
+    overrides: ScheduleOverride[],
+    force?: boolean
+  ) => void;
+  markDataAsStale: (
+    type: "availability" | "appointments" | "overrides",
+    id: string
+  ) => void;
+  refreshStaleData: () => void;
 
   addRecentEvent: (event: RealtimeEventData) => void;
   clearRecentEvents: () => void;
 
+  // Performance monitoring
+  updatePerformanceMetrics: (responseTime: number, success: boolean) => void;
+  resetPerformanceMetrics: () => void;
+
+  // Sync management
+  addPendingSync: (syncId: string) => void;
+  removePendingSync: (syncId: string) => void;
+  addSyncError: (error: string) => void;
+  clearSyncErrors: () => void;
+
   updateSettings: (settings: Partial<RealtimeState["settings"]>) => void;
+
+  // Persistence
+  persistState: () => void;
+  restoreState: () => void;
 
   // Initialization and cleanup
   initialize: () => void;
@@ -95,11 +181,30 @@ export const useRealtimeStore = create<RealtimeState>()(
       conflicts: [],
       recentEvents: [],
 
+      syncState: {
+        lastSyncTimestamp: new Date(),
+        pendingSyncs: [],
+        syncErrors: [],
+        conflictResolutionQueue: [],
+      },
+
+      performanceMetrics: {
+        averageResponseTime: 0,
+        totalOperations: 0,
+        failedOperations: 0,
+        lastMetricsReset: new Date(),
+        connectionQuality: "good",
+      },
+
       settings: {
         enableNotifications: true,
         enableSounds: true,
         notificationDuration: 5000,
         maxRecentEvents: 50,
+        enablePersistence: true,
+        staleDataThreshold: 5,
+        maxRetryAttempts: 3,
+        enablePerformanceMonitoring: true,
       },
 
       // Connection status actions
@@ -189,29 +294,102 @@ export const useRealtimeStore = create<RealtimeState>()(
         }));
       },
 
-      // Data update actions
-      updateAvailability: (therapistId, availability) => {
+      // Enhanced data update actions with versioning and staleness tracking
+      updateAvailability: (therapistId, availability, force = false) => {
         set((state) => {
           const newUpdates = new Map(state.availabilityUpdates);
-          newUpdates.set(therapistId, availability);
+          const existing = newUpdates.get(therapistId);
+          const newVersion = existing ? existing.version + 1 : 1;
+
+          // Only update if forced or data is newer
+          if (force || !existing || newVersion > existing.version) {
+            newUpdates.set(therapistId, {
+              data: availability,
+              lastUpdated: new Date(),
+              version: newVersion,
+              isStale: false,
+            });
+          }
+
           return { availabilityUpdates: newUpdates };
         });
       },
 
-      updateAppointments: (userId, appointments) => {
+      updateAppointments: (userId, appointments, force = false) => {
         set((state) => {
           const newUpdates = new Map(state.appointmentUpdates);
-          newUpdates.set(userId, appointments);
+          const existing = newUpdates.get(userId);
+          const newVersion = existing ? existing.version + 1 : 1;
+
+          if (force || !existing || newVersion > existing.version) {
+            newUpdates.set(userId, {
+              data: appointments,
+              lastUpdated: new Date(),
+              version: newVersion,
+              isStale: false,
+            });
+          }
+
           return { appointmentUpdates: newUpdates };
         });
       },
 
-      updateOverrides: (therapistId, overrides) => {
+      updateOverrides: (therapistId, overrides, force = false) => {
         set((state) => {
           const newUpdates = new Map(state.overrideUpdates);
-          newUpdates.set(therapistId, overrides);
+          const existing = newUpdates.get(therapistId);
+          const newVersion = existing ? existing.version + 1 : 1;
+
+          if (force || !existing || newVersion > existing.version) {
+            newUpdates.set(therapistId, {
+              data: overrides,
+              lastUpdated: new Date(),
+              version: newVersion,
+              isStale: false,
+            });
+          }
+
           return { overrideUpdates: newUpdates };
         });
+      },
+
+      markDataAsStale: (type, id) => {
+        set((state) => {
+          let targetMap;
+          switch (type) {
+            case "availability":
+              targetMap = new Map(state.availabilityUpdates);
+              break;
+            case "appointments":
+              targetMap = new Map(state.appointmentUpdates);
+              break;
+            case "overrides":
+              targetMap = new Map(state.overrideUpdates);
+              break;
+            default:
+              return state;
+          }
+
+          const existing = targetMap.get(id);
+          if (existing) {
+            targetMap.set(id, { ...(existing as any), isStale: true });
+          }
+
+          return {
+            ...state,
+            [type === "availability"
+              ? "availabilityUpdates"
+              : type === "appointments"
+              ? "appointmentUpdates"
+              : "overrideUpdates"]: targetMap,
+          };
+        });
+      },
+
+      refreshStaleData: () => {
+        // This would trigger a refresh of all stale data
+        // Implementation depends on how you want to handle data refresh
+        console.log("Refreshing stale data...");
       },
 
       // Event tracking actions
@@ -276,7 +454,7 @@ export const useRealtimeStore = create<RealtimeState>()(
         });
 
         // Store cleanup functions (you might want to store these in state if needed)
-        (window as Record<string, unknown>).__realtimeCleanup = () => {
+        (window as any).__realtimeCleanup = () => {
           unsubscribeConnection();
           unsubscribeConflicts();
           unsubscribeEvents();
@@ -285,7 +463,7 @@ export const useRealtimeStore = create<RealtimeState>()(
 
       cleanup: () => {
         // Call stored cleanup functions
-        const windowWithCleanup = window as Record<string, unknown>;
+        const windowWithCleanup = window as any;
         if (windowWithCleanup.__realtimeCleanup) {
           (windowWithCleanup.__realtimeCleanup as () => void)();
           delete windowWithCleanup.__realtimeCleanup;

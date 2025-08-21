@@ -5,8 +5,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
-export const runtime = "nodejs";
-
 // Define route patterns
 const PUBLIC_ROUTES = ["/login", "/register", "/forgot-password", "/"];
 const CLIENT_ROUTES = ["/client"];
@@ -22,7 +20,11 @@ const PROTECTED_ROUTES = [
   ...SESSION_ROUTES,
 ];
 
-export async function middleware(request: NextRequest) {
+export default function middleware(request: NextRequest) {
+  console.log(
+    "Middleware execution started for path:",
+    request.nextUrl.pathname
+  );
   const { pathname } = request.nextUrl;
 
   // Skip middleware for static files and API routes (except auth API)
@@ -37,11 +39,13 @@ export async function middleware(request: NextRequest) {
 
   // Check if route requires authentication
   const isPublicRoute = PUBLIC_ROUTES.some((route) =>
-    pathname.startsWith(route)
+    route === "/" ? pathname === route : pathname.startsWith(route)
   );
+  console.log("isPublicRoute:", isPublicRoute);
   const isProtectedRoute = PROTECTED_ROUTES.some((route) =>
     pathname.startsWith(route)
   );
+  console.log("isProtectedRoute:", isProtectedRoute);
 
   if (!isProtectedRoute && !isPublicRoute) {
     // Default to requiring authentication for unknown routes
@@ -59,10 +63,11 @@ export async function middleware(request: NextRequest) {
     request.headers.get("authorization")?.replace("Bearer ", "");
 
   if (!token) {
+    console.log("No token found, redirecting to login");
     // Redirect to login if no token
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.redirect(
+      new URL(`/login?redirect=${pathname}`, request.url)
+    );
   }
 
   try {
@@ -100,6 +105,9 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public folder
      */
-    "/((?!_next/static|_next/image|favicon.ico|public).*)",
+    "/therapist/:path*",
+    "/client/:path*",
+    "/admin/:path*",
+    "/session/:path*",
   ],
 };

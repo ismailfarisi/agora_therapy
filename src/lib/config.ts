@@ -25,6 +25,10 @@ export const config = {
   agora: {
     appId: process.env.NEXT_PUBLIC_AGORA_APP_ID!,
     appCertificate: process.env.AGORA_APP_CERTIFICATE!,
+    tempTokenExpiry: parseInt(
+      process.env.AGORA_TEMP_TOKEN_EXPIRY || "3600",
+      10
+    ),
   },
 
   // Stripe Configuration

@@ -25,11 +25,18 @@ import { TherapistAvailability, TimeSlot } from "@/types/database";
 import { cn } from "@/lib/utils";
 import { getDayNames } from "@/lib/utils/calendar-utils";
 import { TimeSlotPicker } from "./TimeSlotPicker";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export interface RecurringScheduleSetupProps {
   timeSlots: TimeSlot[];
   existingAvailability?: TherapistAvailability[];
-  onComplete?: (schedule: WeeklySchedule) => void;
+  onComplete?: (schedule: RecurringScheduleData) => void;
   onCancel?: () => void;
   className?: string;
 }
@@ -37,6 +44,19 @@ export interface RecurringScheduleSetupProps {
 export interface WeeklySchedule {
   [dayOfWeek: number]: string[]; // timeSlotIds
 }
+
+export interface RecurringScheduleData {
+  pattern: "weekly" | "biweekly" | "monthly";
+  schedule: WeeklySchedule;
+  monthlyConfig?: {
+    type: "dayOfMonth" | "weekOfMonth";
+    dayOfMonth?: number;
+    weekOfMonth?: number;
+    dayOfWeek?: number;
+  };
+}
+
+type RecurrencePattern = "weekly" | "biweekly" | "monthly";
 
 interface ScheduleStep {
   id: string;
@@ -53,7 +73,15 @@ export function RecurringScheduleSetup({
   className,
 }: RecurringScheduleSetupProps) {
   const [currentStep, setCurrentStep] = useState(0);
+  const [recurrencePattern, setRecurrencePattern] =
+    useState<RecurrencePattern>("weekly");
   const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>({});
+  const [monthlyDayOfMonth, setMonthlyDayOfMonth] = useState<number>(1);
+  const [monthlyWeekOfMonth, setMonthlyWeekOfMonth] = useState<number>(1);
+  const [monthlyDayOfWeek, setMonthlyDayOfWeek] = useState<number>(1);
+  const [monthlyType, setMonthlyType] = useState<"dayOfMonth" | "weekOfMonth">(
+    "dayOfMonth"
+  );
   const [copyFromDay, setCopyFromDay] = useState<number | null>(null);
 
   const dayNames = getDayNames("long");
@@ -67,9 +95,15 @@ export function RecurringScheduleSetup({
       completed: false,
     },
     {
+      id: "pattern",
+      title: "Recurrence Pattern",
+      description: "Choose weekly, biweekly, or monthly recurrence",
+      completed: false,
+    },
+    {
       id: "weekly",
-      title: "Weekly Schedule",
-      description: "Set your availability for each day of the week",
+      title: "Schedule Setup",
+      description: "Set your availability for the chosen pattern",
       completed: false,
     },
     {
@@ -125,7 +159,24 @@ export function RecurringScheduleSetup({
   };
 
   const handleComplete = () => {
-    onComplete?.(weeklySchedule);
+    const scheduleData: RecurringScheduleData = {
+      pattern: recurrencePattern,
+      schedule: weeklySchedule,
+      ...(recurrencePattern === "monthly" && {
+        monthlyConfig: {
+          type: monthlyType,
+          ...(monthlyType === "dayOfMonth" && {
+            dayOfMonth: monthlyDayOfMonth,
+          }),
+          ...(monthlyType === "weekOfMonth" && {
+            weekOfMonth: monthlyWeekOfMonth,
+            dayOfWeek: monthlyDayOfWeek,
+          }),
+        },
+      }),
+    };
+
+    onComplete?.(scheduleData);
   };
 
   const getTotalSlotsSelected = () => {
@@ -167,8 +218,8 @@ export function RecurringScheduleSetup({
           Current Schedule Overview
         </h3>
         <p className="text-gray-600">
-          Let's set up your weekly recurring schedule. You can customize your
-          availability for each day.
+          Let&apos;s set up your weekly recurring schedule. You can customize
+          your availability for each day.
         </p>
       </div>
 
@@ -203,6 +254,220 @@ export function RecurringScheduleSetup({
               )}
             </div>
           );
+
+          const renderPatternStep = () => (
+            <div className="space-y-6">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-2">
+                  Choose Recurrence Pattern
+                </h3>
+                <p className="text-gray-600">
+                  Select how often your schedule should repeat
+                </p>
+              </div>
+
+              {/* Pattern Selection */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[
+                    {
+                      value: "weekly",
+                      label: "Weekly",
+                      description: "Same schedule every week",
+                      icon: "🗓️",
+                    },
+                    {
+                      value: "biweekly",
+                      label: "Bi-weekly",
+                      description: "Every two weeks",
+                      icon: "📅",
+                    },
+                    {
+                      value: "monthly",
+                      label: "Monthly",
+                      description: "Same pattern each month",
+                      icon: "🗓️",
+                    },
+                  ].map((pattern) => (
+                    <div
+                      key={pattern.value}
+                      className={cn(
+                        "p-6 border rounded-lg cursor-pointer transition-colors",
+                        recurrencePattern === pattern.value
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-200 hover:border-gray-300"
+                      )}
+                      onClick={() =>
+                        setRecurrencePattern(pattern.value as RecurrencePattern)
+                      }
+                    >
+                      <div className="text-center space-y-2">
+                        <div className="text-2xl">{pattern.icon}</div>
+                        <h4 className="font-medium">{pattern.label}</h4>
+                        <p className="text-sm text-gray-600">
+                          {pattern.description}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Monthly Configuration */}
+                {recurrencePattern === "monthly" && (
+                  <div className="bg-blue-50 p-6 rounded-lg space-y-4">
+                    <h4 className="font-medium text-blue-900">
+                      Monthly Schedule Options
+                    </h4>
+
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">
+                          How should the monthly schedule repeat?
+                        </label>
+                        <Select
+                          value={monthlyType}
+                          onValueChange={(
+                            value: "dayOfMonth" | "weekOfMonth"
+                          ) => setMonthlyType(value)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="dayOfMonth">
+                              Same day of month (e.g., 15th of every month)
+                            </SelectItem>
+                            <SelectItem value="weekOfMonth">
+                              Same week and day (e.g., 2nd Tuesday of every
+                              month)
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {monthlyType === "dayOfMonth" && (
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium">
+                            Day of Month
+                          </label>
+                          <Select
+                            value={monthlyDayOfMonth.toString()}
+                            onValueChange={(value) =>
+                              setMonthlyDayOfMonth(parseInt(value))
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 28 }, (_, i) => i + 1).map(
+                                (day) => (
+                                  <SelectItem key={day} value={day.toString()}>
+                                    {day}
+                                    {day === 1
+                                      ? "st"
+                                      : day === 2
+                                      ? "nd"
+                                      : day === 3
+                                      ? "rd"
+                                      : "th"}{" "}
+                                    of every month
+                                  </SelectItem>
+                                )
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+
+                      {monthlyType === "weekOfMonth" && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">
+                              Week of Month
+                            </label>
+                            <Select
+                              value={monthlyWeekOfMonth.toString()}
+                              onValueChange={(value) =>
+                                setMonthlyWeekOfMonth(parseInt(value))
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="1">1st week</SelectItem>
+                                <SelectItem value="2">2nd week</SelectItem>
+                                <SelectItem value="3">3rd week</SelectItem>
+                                <SelectItem value="4">4th week</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">
+                              Day of Week
+                            </label>
+                            <Select
+                              value={monthlyDayOfWeek.toString()}
+                              onValueChange={(value) =>
+                                setMonthlyDayOfWeek(parseInt(value))
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {dayNames.map((day, index) => (
+                                  <SelectItem
+                                    key={index}
+                                    value={index.toString()}
+                                  >
+                                    {day}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium mb-2">Pattern Summary</h4>
+                <p className="text-sm text-gray-600">
+                  {recurrencePattern === "weekly" &&
+                    "Your schedule will repeat every week"}
+                  {recurrencePattern === "biweekly" &&
+                    "Your schedule will repeat every two weeks"}
+                  {recurrencePattern === "monthly" &&
+                    monthlyType === "dayOfMonth" &&
+                    `Your schedule will repeat on the ${monthlyDayOfMonth}${
+                      monthlyDayOfMonth === 1
+                        ? "st"
+                        : monthlyDayOfMonth === 2
+                        ? "nd"
+                        : monthlyDayOfMonth === 3
+                        ? "rd"
+                        : "th"
+                    } of every month`}
+                  {recurrencePattern === "monthly" &&
+                    monthlyType === "weekOfMonth" &&
+                    `Your schedule will repeat on the ${
+                      monthlyWeekOfMonth === 1
+                        ? "1st"
+                        : monthlyWeekOfMonth === 2
+                        ? "2nd"
+                        : monthlyWeekOfMonth === 3
+                        ? "3rd"
+                        : "4th"
+                    } ${dayNames[monthlyDayOfWeek]} of every month`}
+                </p>
+              </div>
+            </div>
+          );
         })}
       </div>
 
@@ -214,6 +479,208 @@ export function RecurringScheduleSetup({
           <li>• Review and adjust before applying changes</li>
           <li>• Override specific dates later with custom schedules</li>
         </ul>
+      </div>
+    </div>
+  );
+
+  const renderPatternStep = () => (
+    <div className="space-y-6">
+      <div className="text-center">
+        <h3 className="text-lg font-semibold mb-2">
+          Choose Recurrence Pattern
+        </h3>
+        <p className="text-gray-600">
+          Select how often your schedule should repeat
+        </p>
+      </div>
+
+      {/* Pattern Selection */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            {
+              value: "weekly",
+              label: "Weekly",
+              description: "Same schedule every week",
+              icon: "🗓️",
+            },
+            {
+              value: "biweekly",
+              label: "Bi-weekly",
+              description: "Every two weeks",
+              icon: "📅",
+            },
+            {
+              value: "monthly",
+              label: "Monthly",
+              description: "Same pattern each month",
+              icon: "🗓️",
+            },
+          ].map((pattern) => (
+            <div
+              key={pattern.value}
+              className={cn(
+                "p-6 border rounded-lg cursor-pointer transition-colors",
+                recurrencePattern === pattern.value
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-200 hover:border-gray-300"
+              )}
+              onClick={() =>
+                setRecurrencePattern(pattern.value as RecurrencePattern)
+              }
+            >
+              <div className="text-center space-y-2">
+                <div className="text-2xl">{pattern.icon}</div>
+                <h4 className="font-medium">{pattern.label}</h4>
+                <p className="text-sm text-gray-600">{pattern.description}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Monthly Configuration */}
+        {recurrencePattern === "monthly" && (
+          <div className="bg-blue-50 p-6 rounded-lg space-y-4">
+            <h4 className="font-medium text-blue-900">
+              Monthly Schedule Options
+            </h4>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  How should the monthly schedule repeat?
+                </label>
+                <Select
+                  value={monthlyType}
+                  onValueChange={(value: "dayOfMonth" | "weekOfMonth") =>
+                    setMonthlyType(value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dayOfMonth">
+                      Same day of month (e.g., 15th of every month)
+                    </SelectItem>
+                    <SelectItem value="weekOfMonth">
+                      Same week and day (e.g., 2nd Tuesday of every month)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {monthlyType === "dayOfMonth" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Day of Month</label>
+                  <Select
+                    value={monthlyDayOfMonth.toString()}
+                    onValueChange={(value) =>
+                      setMonthlyDayOfMonth(parseInt(value))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 28 }, (_, i) => i + 1).map(
+                        (day) => (
+                          <SelectItem key={day} value={day.toString()}>
+                            {day}
+                            {day === 1
+                              ? "st"
+                              : day === 2
+                              ? "nd"
+                              : day === 3
+                              ? "rd"
+                              : "th"}{" "}
+                            of every month
+                          </SelectItem>
+                        )
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {monthlyType === "weekOfMonth" && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Week of Month</label>
+                    <Select
+                      value={monthlyWeekOfMonth.toString()}
+                      onValueChange={(value) =>
+                        setMonthlyWeekOfMonth(parseInt(value))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">1st week</SelectItem>
+                        <SelectItem value="2">2nd week</SelectItem>
+                        <SelectItem value="3">3rd week</SelectItem>
+                        <SelectItem value="4">4th week</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Day of Week</label>
+                    <Select
+                      value={monthlyDayOfWeek.toString()}
+                      onValueChange={(value) =>
+                        setMonthlyDayOfWeek(parseInt(value))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dayNames.map((day, index) => (
+                          <SelectItem key={index} value={index.toString()}>
+                            {day}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <h4 className="font-medium mb-2">Pattern Summary</h4>
+        <p className="text-sm text-gray-600">
+          {recurrencePattern === "weekly" &&
+            "Your schedule will repeat every week"}
+          {recurrencePattern === "biweekly" &&
+            "Your schedule will repeat every two weeks"}
+          {recurrencePattern === "monthly" &&
+            monthlyType === "dayOfMonth" &&
+            `Your schedule will repeat on the ${monthlyDayOfMonth}${
+              monthlyDayOfMonth === 1
+                ? "st"
+                : monthlyDayOfMonth === 2
+                ? "nd"
+                : monthlyDayOfMonth === 3
+                ? "rd"
+                : "th"
+            } of every month`}
+          {recurrencePattern === "monthly" &&
+            monthlyType === "weekOfMonth" &&
+            `Your schedule will repeat on the ${
+              monthlyWeekOfMonth === 1
+                ? "1st"
+                : monthlyWeekOfMonth === 2
+                ? "2nd"
+                : monthlyWeekOfMonth === 3
+                ? "3rd"
+                : "4th"
+            } ${dayNames[monthlyDayOfWeek]} of every month`}
+        </p>
       </div>
     </div>
   );
@@ -388,7 +855,7 @@ export function RecurringScheduleSetup({
               (Object.values(weeklySchedule).reduce((sum, slots) => {
                 return (
                   sum +
-                  slots.reduce((slotSum, slotId) => {
+                  slots.reduce((slotSum: number, slotId: string) => {
                     const slot = timeSlots.find((ts) => ts.id === slotId);
                     return slotSum + (slot?.duration || 0);
                   }, 0)
@@ -403,7 +870,9 @@ export function RecurringScheduleSetup({
         </div>
 
         <div className="text-center p-4 bg-orange-50 rounded-lg">
-          <div className="text-2xl font-bold text-orange-600">Weekly</div>
+          <div className="text-2xl font-bold text-orange-600 capitalize">
+            {recurrencePattern}
+          </div>
           <div className="text-sm text-orange-800">Recurring</div>
         </div>
       </div>
@@ -415,7 +884,7 @@ export function RecurringScheduleSetup({
             <span className="font-medium">No Schedule Set</span>
           </div>
           <p className="text-sm text-yellow-700 mt-2">
-            You haven't selected any time slots. Go back to set your
+            You haven&apos;t selected any time slots. Go back to set your
             availability.
           </p>
         </div>
@@ -482,8 +951,9 @@ export function RecurringScheduleSetup({
         {/* Step Content */}
         <div className="min-h-[500px]">
           {currentStep === 0 && renderOverviewStep()}
-          {currentStep === 1 && renderWeeklyStep()}
-          {currentStep === 2 && renderReviewStep()}
+          {currentStep === 1 && renderPatternStep()}
+          {currentStep === 2 && renderWeeklyStep()}
+          {currentStep === 3 && renderReviewStep()}
         </div>
 
         {/* Navigation */}

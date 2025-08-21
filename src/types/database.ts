@@ -15,7 +15,8 @@ export type AppointmentStatus =
   | "completed"
   | "cancelled"
   | "no_show";
-export type SessionType = "video" | "phone" | "in_person";
+export type SessionType = "individual" | "group" | "consultation" | "follow_up";
+export type SessionDeliveryType = "video" | "phone" | "in_person";
 export type PaymentStatus = "pending" | "paid" | "refunded" | "failed";
 export type OverrideType = "day_off" | "custom_hours" | "time_off";
 export type SessionPlatform = "agora" | "zoom" | "teams";
@@ -145,6 +146,7 @@ export interface Appointment {
 
   session: {
     type: SessionType;
+    deliveryType: SessionDeliveryType;
     platform?: SessionPlatform;
     channelId?: string;
     accessToken?: string;
@@ -245,6 +247,18 @@ export interface AvailableSlot {
   duration: number;
   price: number;
   currency: string;
+}
+
+// Enhanced Available Slot (computed interface for client booking)
+export interface EnhancedAvailableSlot extends AvailableSlot {
+  isBooked: boolean;
+  therapistTimezone: string;
+  localStartTime: string;
+  localEndTime: string;
+  localDate: string;
+  displayTime: string;
+  bufferTime?: number;
+  isOverride?: boolean;
 }
 
 // Booking Request (API interface)

@@ -322,6 +322,88 @@ export function convertTimeSlotsToUserTimezone(
   }));
 }
 
+/**
+ * Convert time slots from one timezone to another for availability
+ * @param timeSlots - Array of time slot IDs
+ * @param date - Date string in YYYY-MM-DD format
+ * @param sourceTimezone - Source timezone (e.g., therapist's timezone)
+ * @param targetTimezone - Target timezone (e.g., client's timezone)
+ * @param allTimeSlots - All available time slots with their time data
+ * @returns Converted time slot IDs that are valid in the target timezone
+ */
+export function convertAvailabilityTimeSlots(
+  timeSlots: string[],
+  date: string,
+  sourceTimezone: string,
+  targetTimezone: string,
+  allTimeSlots: Array<{ id: string; startTime: string; endTime: string }>
+): string[] {
+  if (!isValidTimezone(sourceTimezone) || !isValidTimezone(targetTimezone)) {
+    console.warn("Invalid timezone provided, returning original slots");
+    return timeSlots;
+  }
+
+  if (sourceTimezone === targetTimezone) {
+    return timeSlots;
+  }
+
+  const convertedSlots: string[] = [];
+
+  for (const slotId of timeSlots) {
+    const timeSlot = allTimeSlots.find((slot) => slot.id === slotId);
+    if (!timeSlot) continue;
+
+    try {
+      // Convert the time slot from source to target timezone
+      const convertedStartTime = convertTimeString(
+        timeSlot.startTime,
+        new Date(date + "T00:00:00"),
+        sourceTimezone,
+        targetTimezone
+      );
+
+      const convertedEndTime = convertTimeString(
+        timeSlot.endTime,
+        new Date(date + "T00:00:00"),
+        sourceTimezone,
+        targetTimezone
+      );
+
+      // Find matching time slot in target timezone
+      const matchingSlot = allTimeSlots.find(
+        (slot) =>
+          slot.startTime === convertedStartTime &&
+          slot.endTime === convertedEndTime
+      );
+
+      if (matchingSlot) {
+        convertedSlots.push(matchingSlot.id);
+      }
+    } catch (error) {
+      console.error(`Error converting time slot ${slotId}:`, error);
+      // Keep original slot on error
+      convertedSlots.push(slotId);
+    }
+  }
+
+  return convertedSlots;
+}
+
+/**
+ * Check if two timezones are effectively the same
+ */
+export function isSameTimezone(tz1: string, tz2: string): boolean {
+  if (tz1 === tz2) return true;
+
+  try {
+    const offset1 = getTimezoneOffset(tz1);
+    const offset2 = getTimezoneOffset(tz2);
+    return offset1 === offset2;
+  } catch {
+    return false;
+  }
+}
+
 export default {
   COMMON_TIMEZONES,
   getUserTimezone,
@@ -339,4 +421,6 @@ export default {
   getTimezoneOffsetString,
   searchTimezones,
   convertTimeSlotsToUserTimezone,
+  convertAvailabilityTimeSlots,
+  isSameTimezone,
 };

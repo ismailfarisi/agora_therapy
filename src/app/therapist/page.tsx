@@ -1,9 +1,10 @@
+"use client";
+import { TestAgoraToken } from "@/components/TestAgoraToken";
+import { TestBooking } from "@/components/TestBooking";
 /**
  * Therapist Dashboard
  * Main dashboard for therapists to manage clients and appointments
  */
-
-"use client";
 
 import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
@@ -29,12 +30,33 @@ import Link from "next/link";
 export default function TherapistDashboard() {
   const { user, userData, loading } = useAuth();
 
+  // Debug logging to validate diagnosis
+  console.log("[TherapistDashboard] Debug state:", {
+    user: !!user,
+    userData: !!userData,
+    userDataProfile: !!userData?.profile,
+    loading,
+  });
+
   if (loading) {
     return <PageLoadingSpinner text="Loading your dashboard..." />;
   }
 
+  if (loading) {
+    return <PageLoadingSpinner text="Authenticating..." />;
+  }
+
+  // Fix: Use OR instead of AND, and check for userData specifically
   if (!user || !userData) {
-    return null; // This will be handled by middleware
+    console.log("[TherapistDashboard] Missing auth data:", {
+      user: !!user,
+      userData: !!userData,
+    });
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p>Loading user data...</p>
+      </div>
+    );
   }
 
   return (
@@ -46,8 +68,9 @@ export default function TherapistDashboard() {
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">
             Welcome back, Dr.{" "}
-            {userData.profile?.lastName ||
-              userData.profile?.firstName ||
+            {userData?.profile?.lastName ||
+              userData?.profile?.firstName ||
+              userData?.email?.split("@")[0] ||
               "Therapist"}
           </h1>
           <p className="text-gray-600">
@@ -211,3 +234,7 @@ export default function TherapistDashboard() {
     </div>
   );
 }
+
+<TestAgoraToken />;
+
+<TestAgoraToken />;

@@ -144,14 +144,74 @@ export class TimeSlotService {
    */
   static async deleteTimeSlot(id: string): Promise<void> {
     try {
-      // TODO: Check if time slot is in use by appointments or availability
-      // For now, we'll allow deletion but this should be enhanced
+      // Validate that time slot can be safely deleted
+      await this.validateTimeSlotDeletion(id);
 
       const docRef = documents.timeSlot(id);
       await deleteDoc(docRef);
     } catch (error) {
       console.error("Error deleting time slot:", error);
-      throw new Error("Failed to delete time slot");
+      throw error instanceof Error
+        ? error
+        : new Error("Failed to delete time slot");
+    }
+  }
+
+  /**
+   * Validate that a time slot can be safely deleted by checking for dependencies
+   */
+  private static async validateTimeSlotDeletion(
+    timeSlotId: string
+  ): Promise<void> {
+    try {
+      // Check if time slot is referenced in therapist availability
+      const availabilityQuery = query(
+        collections.therapistAvailability(),
+        where("timeSlotId", "==", timeSlotId)
+      );
+
+      const availabilitySnapshot = await getDocs(availabilityQuery);
+
+      if (!availabilitySnapshot.empty) {
+        const therapistIds = Array.from(
+          new Set(
+            availabilitySnapshot.docs.map((doc) => doc.data().therapistId)
+          )
+        );
+        throw new Error(
+          `Cannot delete time slot. It is currently used in availability schedules by ${therapistIds.length} therapist(s). ` +
+            `Please remove this time slot from all therapist schedules before deletion.`
+        );
+      }
+
+      // Check if time slot is referenced in appointments
+      const appointmentsQuery = query(
+        collections.appointments(),
+        where("timeSlotId", "==", timeSlotId),
+        where("status", "in", ["pending", "confirmed"])
+      );
+
+      const appointmentsSnapshot = await getDocs(appointmentsQuery);
+
+      if (!appointmentsSnapshot.empty) {
+        const appointmentIds = appointmentsSnapshot.docs.map((doc) => doc.id);
+        throw new Error(
+          `Cannot delete time slot. It is currently used by ${
+            appointmentIds.length
+          } active appointment(s): ${appointmentIds.slice(0, 5).join(", ")}${
+            appointmentIds.length > 5 ? "..." : ""
+          }. ` +
+            `Please cancel or reschedule these appointments before deleting the time slot.`
+        );
+      }
+    } catch (error) {
+      if (error instanceof Error) {
+        throw error;
+      }
+      console.error("Error validating time slot deletion:", error);
+      throw new Error(
+        "Failed to validate time slot deletion due to database error"
+      );
     }
   }
 

@@ -18,6 +18,7 @@ import {
   DocumentSnapshot,
   QuerySnapshot,
   getDoc,
+  getDocs,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { collections, documents } from "@/lib/firebase/collections";
@@ -64,16 +65,41 @@ class RealtimeService {
   private conflictListeners: Set<ConflictCallback> = new Set();
   private connectionListeners: Set<ConnectionCallback> = new Set();
   private subscriptions: Map<string, Unsubscribe> = new Map();
-  private connectionStatus: ConnectionStatus = {
-    isOnline: navigator.onLine,
-    reconnectAttempts: 0,
-  };
+  private connectionStatus: ConnectionStatus;
   private heartbeatInterval?: NodeJS.Timeout;
   private reconnectTimeout?: NodeJS.Timeout;
 
+  // Enhanced connection management
+  private maxReconnectAttempts = 10;
+  private baseReconnectDelay = 1000;
+  private maxReconnectDelay = 30000;
+  private heartbeatFrequency = 30000;
+  private connectionQuality: "excellent" | "good" | "poor" | "offline" = "good";
+
+  // Multi-client synchronization
+  private clientId: string;
+  private syncBuffer: Map<string, RealtimeEventData[]> = new Map();
+  private lastSyncTimestamp: Date = new Date();
+
+  // Performance monitoring
+  private performanceMetrics = {
+    averageLatency: 0,
+    successfulRequests: 0,
+    failedRequests: 0,
+    lastLatencyCheck: new Date(),
+  };
+
   constructor() {
-    this.setupConnectionMonitoring();
+    this.clientId = this.generateClientId();
+    this.connectionStatus = {
+      isOnline: typeof navigator !== "undefined" && navigator.onLine,
+      reconnectAttempts: 0,
+    };
+    if (typeof window !== "undefined") {
+      this.setupConnectionMonitoring();
+    }
     this.startHeartbeat();
+    this.initializePerformanceMonitoring();
   }
 
   /**
@@ -364,12 +390,36 @@ class RealtimeService {
   }
 
   /**
-   * Force reconnection attempt
+   * Enhanced reconnection attempt with better state management
    */
   reconnect(): void {
+    if (this.connectionStatus.reconnectAttempts >= this.maxReconnectAttempts) {
+      console.warn("Max reconnection attempts reached");
+      return;
+    }
+
+    console.log(
+      `Reconnection attempt ${this.connectionStatus.reconnectAttempts + 1}`
+    );
+
+    // Clear any existing intervals
+    if (this.heartbeatInterval) {
+      clearInterval(this.heartbeatInterval);
+    }
+
     this.connectionStatus.reconnectAttempts++;
-    this.updateConnectionStatus({ isOnline: true });
+    this.updateConnectionStatus({
+      isOnline: typeof navigator !== "undefined" && navigator.onLine,
+      reconnectAttempts: this.connectionStatus.reconnectAttempts,
+    });
+
+    // Restart heartbeat to test connection
     this.startHeartbeat();
+
+    // Try to process any buffered sync events
+    this.processSyncBuffer().catch((error) => {
+      console.error("Error processing sync buffer during reconnection:", error);
+    });
   }
 
   /**
@@ -430,16 +480,26 @@ class RealtimeService {
     const startTime = Date.now();
 
     try {
-      // Simple Firebase read to check connectivity
+      // Enhanced heartbeat with performance monitoring
       await getDoc(doc(db, "heartbeat", "test"));
       const latency = Date.now() - startTime;
+
+      // Update performance metrics
+      this.updatePerformanceMetrics(latency, true);
+
+      // Determine connection quality based on latency
+      this.updateConnectionQuality(latency);
 
       this.updateConnectionStatus({
         isOnline: true,
         latency,
         reconnectAttempts: 0,
       });
+
+      // Process any buffered sync events
+      await this.processSyncBuffer();
     } catch (error) {
+      this.updatePerformanceMetrics(0, false);
       this.handleConnectionError(error as Error);
     }
   }
@@ -452,19 +512,27 @@ class RealtimeService {
       reconnectAttempts: this.connectionStatus.reconnectAttempts + 1,
     });
 
-    // Implement exponential backoff for reconnection
-    const backoffDelay = Math.min(
-      1000 * Math.pow(2, this.connectionStatus.reconnectAttempts),
-      30000
-    );
+    // Enhanced exponential backoff with jitter and max attempts
+    if (this.connectionStatus.reconnectAttempts < this.maxReconnectAttempts) {
+      const backoffDelay = this.getReconnectDelay();
 
-    if (this.reconnectTimeout) {
-      clearTimeout(this.reconnectTimeout);
+      if (this.reconnectTimeout) {
+        clearTimeout(this.reconnectTimeout);
+      }
+
+      this.reconnectTimeout = setTimeout(() => {
+        this.reconnect();
+      }, backoffDelay);
+    } else {
+      // Max attempts reached - emit final offline status
+      this.connectionQuality = "offline";
+      this.emitEvent({
+        type: "availability",
+        action: "updated",
+        data: { connectionLost: true, maxRetriesReached: true },
+        timestamp: new Date(),
+      });
     }
-
-    this.reconnectTimeout = setTimeout(() => {
-      this.reconnect();
-    }, backoffDelay);
   }
 
   private updateConnectionStatus(updates: Partial<ConnectionStatus>): void {
@@ -566,6 +634,175 @@ class RealtimeService {
 
     // Consider user online if they were active within last 5 minutes
     return diffMinutes < 5;
+  }
+  // Enhanced helper methods
+
+  private generateClientId(): string {
+    return `client_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  private initializePerformanceMonitoring(): void {
+    // Reset performance metrics periodically
+    setInterval(() => {
+      if (
+        this.performanceMetrics.successfulRequests +
+          this.performanceMetrics.failedRequests >
+        0
+      ) {
+        this.performanceMetrics.lastLatencyCheck = new Date();
+      }
+    }, 60000); // Every minute
+  }
+
+  private updatePerformanceMetrics(latency: number, success: boolean): void {
+    if (success) {
+      this.performanceMetrics.successfulRequests++;
+      // Calculate rolling average latency
+      const totalRequests = this.performanceMetrics.successfulRequests;
+      this.performanceMetrics.averageLatency =
+        (this.performanceMetrics.averageLatency * (totalRequests - 1) +
+          latency) /
+        totalRequests;
+    } else {
+      this.performanceMetrics.failedRequests++;
+    }
+  }
+
+  private updateConnectionQuality(latency: number): void {
+    if (latency < 100) {
+      this.connectionQuality = "excellent";
+    } else if (latency < 300) {
+      this.connectionQuality = "good";
+    } else if (latency < 1000) {
+      this.connectionQuality = "poor";
+    } else {
+      this.connectionQuality = "offline";
+    }
+  }
+
+  private async processSyncBuffer(): Promise<void> {
+    // Process any buffered synchronization events
+    for (const [key, events] of this.syncBuffer.entries()) {
+      if (events.length > 0) {
+        // Emit buffered events in order
+        events.forEach((event) => this.emitEvent(event));
+        // Clear processed events
+        this.syncBuffer.delete(key);
+      }
+    }
+    this.lastSyncTimestamp = new Date();
+  }
+
+  // Enhanced conflict detection with multi-client awareness
+  async detectAvailabilityConflicts(
+    therapistId: string,
+    timeSlotId: string,
+    date: Date,
+    excludeClientId?: string
+  ): Promise<ConflictData[]> {
+    const conflicts: ConflictData[] = [];
+
+    try {
+      // Check for overlapping appointments
+      const q = query(
+        collections.appointments(),
+        where("therapistId", "==", therapistId),
+        where("timeSlotId", "==", timeSlotId),
+        where("scheduledFor", "==", Timestamp.fromDate(date)),
+        where("status", "in", ["pending", "confirmed", "in_progress"])
+      );
+
+      const snapshot = await getDocs(q);
+
+      snapshot.docs.forEach((docSnap) => {
+        const appointment = docSnap.data() as Appointment;
+        if (excludeClientId && appointment.clientId === excludeClientId) {
+          return; // Skip if this is the same client
+        }
+
+        conflicts.push({
+          id: `availability_conflict_${docSnap.id}`,
+          type: "availability_conflict",
+          details: {
+            conflictingEntity: appointment as unknown as Record<
+              string,
+              unknown
+            >,
+            requestedAction: "book_appointment",
+            timestamp: new Date(),
+          },
+          resolved: false,
+        });
+      });
+    } catch (error) {
+      console.error("Error detecting availability conflicts:", error);
+    }
+
+    return conflicts;
+  }
+
+  // Enhanced connection recovery with exponential backoff
+  private getReconnectDelay(): number {
+    const exponentialDelay =
+      this.baseReconnectDelay *
+      Math.pow(2, Math.min(this.connectionStatus.reconnectAttempts, 5));
+    return Math.min(
+      exponentialDelay + Math.random() * 1000,
+      this.maxReconnectDelay
+    );
+  }
+
+  // Get performance and connection diagnostics
+  getConnectionDiagnostics() {
+    return {
+      connectionStatus: this.connectionStatus,
+      connectionQuality: this.connectionQuality,
+      performanceMetrics: { ...this.performanceMetrics },
+      clientId: this.clientId,
+      activeSubscriptions: this.subscriptions.size,
+    };
+  }
+
+  // Enhanced subscription management with retry logic
+  async subscribeWithRetry<T>(
+    subscriptionKey: string,
+    subscriptionFn: () => Unsubscribe,
+    maxRetries: number = 3
+  ): Promise<() => void> {
+    let retryCount = 0;
+
+    const attemptSubscription = (): Unsubscribe | null => {
+      try {
+        return subscriptionFn();
+      } catch (error) {
+        console.error(`Subscription attempt ${retryCount + 1} failed:`, error);
+        retryCount++;
+
+        if (retryCount < maxRetries) {
+          setTimeout(() => {
+            const unsubscribe = attemptSubscription();
+            if (unsubscribe) {
+              this.subscriptions.set(subscriptionKey, unsubscribe);
+            }
+          }, this.getReconnectDelay());
+        }
+
+        return null;
+      }
+    };
+
+    const unsubscribe = attemptSubscription();
+    if (unsubscribe) {
+      this.subscriptions.set(subscriptionKey, unsubscribe);
+    }
+
+    return () => {
+      const storedUnsubscribe = this.subscriptions.get(subscriptionKey);
+      if (storedUnsubscribe) {
+        storedUnsubscribe();
+        this.subscriptions.delete(subscriptionKey);
+      }
+    };
   }
 }
 
