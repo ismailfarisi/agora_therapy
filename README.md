@@ -35,6 +35,34 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
+## Security & Configuration
+
+### Firebase Admin Credentials
+
+**IMPORTANT**: Never commit actual Firebase service account credentials to the repository.
+
+1. Copy `firebase-admin.json.example` to `firebase-admin.json`
+2. Replace placeholder values with your actual Firebase service account credentials
+3. The actual `firebase-admin.json` file is already in `.gitignore` and will not be committed
+
+To get your Firebase service account credentials:
+
+1. Go to Firebase Console → Project Settings → Service Accounts
+2. Click "Generate new private key"
+3. Save the downloaded JSON file as `firebase-admin.json` in the project root
+
+### Environment Variables
+
+Create a `.env.local` file in the project root with the following variables:
+
+```
+NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
+FIREBASE_CLIENT_EMAIL=your_service_account_email
+FIREBASE_PRIVATE_KEY=your_private_key
+```
+
 subtask completed
 
 Analyze current codebase structure and existing implementations
