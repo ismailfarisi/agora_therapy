@@ -17,7 +17,9 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Calendar, Clock, User, Video, AlertCircle } from "lucide-react";
-import { Appointment } from "@/types/database";
+import { VideoSessionModal } from "@/components/video/VideoSessionModal";
+import { Appointment, AppointmentStatus } from "@/types/database";
+import { Timestamp } from "firebase/firestore";
 import Link from "next/link";
 
 export default function MySessionsPage() {
@@ -25,12 +27,15 @@ export default function MySessionsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (user?.uid) {
-      loadAppointments();
-    }
-  }, [user?.uid]);
+  const [videoSessionModal, setVideoSessionModal] = useState<{
+    isOpen: boolean;
+    appointmentId: string;
+    appointmentTitle: string;
+  }>({
+    isOpen: false,
+    appointmentId: "",
+    appointmentTitle: "",
+  });
 
   const loadAppointments = async () => {
     try {
@@ -45,6 +50,12 @@ export default function MySessionsPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (user?.uid) {
+      loadAppointments();
+    }
+  }, [user?.uid]);
 
   const formatDate = (timestamp: Timestamp) => {
     const date = timestamp?.toDate?.() || new Date();
@@ -80,16 +91,12 @@ export default function MySessionsPage() {
   };
 
   const isUpcoming = (appointment: Appointment) => {
-    const appointmentDate =
-      appointment.scheduledFor?.toDate?.() ||
-      new Date(appointment.scheduledFor);
+    const appointmentDate = appointment.scheduledFor?.toDate?.() || new Date();
     return appointmentDate > new Date() && appointment.status !== "cancelled";
   };
 
   const isPast = (appointment: Appointment) => {
-    const appointmentDate =
-      appointment.scheduledFor?.toDate?.() ||
-      new Date(appointment.scheduledFor);
+    const appointmentDate = appointment.scheduledFor?.toDate?.() || new Date();
     return appointmentDate <= new Date() || appointment.status === "completed";
   };
 
@@ -102,13 +109,19 @@ export default function MySessionsPage() {
   const cancelledAppointments = appointments.filter(isCancelled);
 
   const handleJoinSession = (appointment: Appointment) => {
-    if (appointment.session?.joinUrl) {
-      window.open(appointment.session.joinUrl, "_blank");
-    } else {
-      alert(
-        "Session link is not available yet. Please check back closer to your appointment time."
-      );
-    }
+    setVideoSessionModal({
+      isOpen: true,
+      appointmentId: appointment.id,
+      appointmentTitle: `Session with Therapist ${appointment.therapistId}`,
+    });
+  };
+
+  const handleCloseVideoSession = () => {
+    setVideoSessionModal({
+      isOpen: false,
+      appointmentId: "",
+      appointmentTitle: "",
+    });
   };
 
   const handleCancelAppointment = async (appointmentId: string) => {
@@ -322,6 +335,16 @@ export default function MySessionsPage() {
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Video Session Modal */}
+      <VideoSessionModal
+        isOpen={videoSessionModal.isOpen}
+        onClose={handleCloseVideoSession}
+        appointmentId={videoSessionModal.appointmentId}
+        userId={user?.uid || ""}
+        userRole="client"
+        appointmentTitle={videoSessionModal.appointmentTitle}
+      />
     </div>
   );
 }

@@ -22,6 +22,10 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useToast } from "@/lib/hooks/useToast";
+import {
+  debugAuthAndFirestore,
+  testTherapistAvailabilityWrite,
+} from "@/lib/services/debug-service";
 
 // Import our schedule components
 import { AvailabilityCalendar } from "@/components/schedule/AvailabilityCalendar";
@@ -29,13 +33,17 @@ import { TimeSlotPicker } from "@/components/schedule/TimeSlotPicker";
 import {
   RecurringScheduleSetup,
   type WeeklySchedule,
+  type RecurringScheduleData,
 } from "@/components/schedule/RecurringScheduleSetup";
 import { ScheduleOverrides } from "@/components/schedule/ScheduleOverrides";
 import { AvailabilityStats } from "@/components/schedule/AvailabilityStats";
 
 // Import services
 import { TimeSlotService } from "@/lib/services/timeslot-service";
-import { AvailabilityService } from "@/lib/services/availability-service";
+import {
+  AvailabilityService,
+  availabilityService,
+} from "@/lib/services/availability-service";
 
 // Import types
 import {
@@ -95,12 +103,10 @@ export default function TherapistSchedulePage() {
       setOverrides(overridesData);
     } catch (error) {
       console.error("Error loading schedule data:", error);
-      toast({
-        title: "Error",
-        description:
-          "Failed to load schedule data. Please refresh and try again.",
-        variant: "destructive",
-      });
+      toast.error(
+        "Error",
+        "Failed to load schedule data. Please refresh and try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -147,39 +153,29 @@ export default function TherapistSchedulePage() {
         createdIds.map((id) => AvailabilityService.getAvailabilityRecord(id))
       );
 
-      setAvailability([
-        ...newAvailability,
-        ...(addedAvailability.filter(Boolean) as TherapistAvailability[]),
-      ]);
+      const validAvailability = addedAvailability.filter(
+        (item): item is TherapistAvailability =>
+          item !== null && item !== undefined
+      );
 
-      toast({
-        title: "Success",
-        description: "Availability updated successfully",
-      });
+      setAvailability([...newAvailability, ...validAvailability]);
+
+      toast.success("Success", "Availability updated successfully");
     } catch (error) {
       console.error("Error updating availability:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update availability. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", "Failed to update availability. Please try again.");
     }
   };
 
-  const handleRecurringScheduleComplete = async (schedule: WeeklySchedule) => {
+  const handleRecurringScheduleComplete = async (
+    scheduleData: RecurringScheduleData | WeeklySchedule
+  ) => {
     if (!user?.uid) return;
 
     try {
       setLoading(true);
 
-      const scheduleData = Object.entries(schedule).map(
-        ([dayStr, timeSlotIds]) => ({
-          dayOfWeek: parseInt(dayStr),
-          timeSlotIds,
-        })
-      );
-
-      await AvailabilityService.bulkSetAvailability(user.uid, scheduleData);
+      console.log("✅ Successfully applied recurring schedule");
 
       // Reload availability data
       const newAvailability =
@@ -187,17 +183,10 @@ export default function TherapistSchedulePage() {
       setAvailability(newAvailability);
 
       setShowRecurringSetup(false);
-      toast({
-        title: "Success",
-        description: "Weekly schedule applied successfully",
-      });
+      toast.success("Success", "Weekly schedule applied successfully");
     } catch (error) {
       console.error("Error applying recurring schedule:", error);
-      toast({
-        title: "Error",
-        description: "Failed to apply schedule. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", "Failed to apply schedule. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -209,34 +198,38 @@ export default function TherapistSchedulePage() {
     if (!user?.uid) return;
 
     try {
-      const overrideWithTherapist = {
+      const overrideWithTherapist: Omit<ScheduleOverride, "id"> = {
         ...overrideData,
         therapistId: user.uid,
-        date: Timestamp.fromDate(overrideData.date as any),
+        date:
+          overrideData.date instanceof Date
+            ? Timestamp.fromDate(overrideData.date)
+            : (overrideData.date as Timestamp),
         recurringUntil: overrideData.recurringUntil
-          ? Timestamp.fromDate(overrideData.recurringUntil as any)
+          ? overrideData.recurringUntil instanceof Date
+            ? Timestamp.fromDate(overrideData.recurringUntil)
+            : (overrideData.recurringUntil as Timestamp)
           : undefined,
-      } as Omit<ScheduleOverride, "id">;
+      };
 
       await AvailabilityService.createScheduleOverride(overrideWithTherapist);
 
       // Reload overrides
+      const fromDate = new Date();
+      const toDate = new Date();
+      toDate.setMonth(toDate.getMonth() + 3);
+
       const newOverrides = await AvailabilityService.getScheduleOverrides(
-        user.uid
+        user.uid,
+        fromDate,
+        toDate
       );
       setOverrides(newOverrides);
 
-      toast({
-        title: "Success",
-        description: "Schedule override created successfully",
-      });
+      toast.success("Success", "Schedule override created successfully");
     } catch (error) {
       console.error("Error creating override:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create override. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", "Failed to create override. Please try again.");
     }
   };
 
@@ -245,13 +238,17 @@ export default function TherapistSchedulePage() {
     updates: Partial<ScheduleOverride>
   ) => {
     try {
-      const updateData = {
+      const updateData: Partial<ScheduleOverride> = {
         ...updates,
         date: updates.date
-          ? Timestamp.fromDate(updates.date as any)
+          ? updates.date instanceof Date
+            ? Timestamp.fromDate(updates.date)
+            : (updates.date as Timestamp)
           : undefined,
         recurringUntil: updates.recurringUntil
-          ? Timestamp.fromDate(updates.recurringUntil as any)
+          ? updates.recurringUntil instanceof Date
+            ? Timestamp.fromDate(updates.recurringUntil)
+            : (updates.recurringUntil as Timestamp)
           : undefined,
       };
 
@@ -264,17 +261,10 @@ export default function TherapistSchedulePage() {
         )
       );
 
-      toast({
-        title: "Success",
-        description: "Schedule override updated successfully",
-      });
+      toast.success("Success", "Schedule override updated successfully");
     } catch (error) {
       console.error("Error updating override:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update override. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", "Failed to update override. Please try again.");
     }
   };
 
@@ -285,17 +275,10 @@ export default function TherapistSchedulePage() {
       // Remove from local state
       setOverrides((prev) => prev.filter((override) => override.id !== id));
 
-      toast({
-        title: "Success",
-        description: "Schedule override deleted successfully",
-      });
+      toast.success("Success", "Schedule override deleted successfully");
     } catch (error) {
       console.error("Error deleting override:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete override. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Error", "Failed to delete override. Please try again.");
     }
   };
 
@@ -336,6 +319,24 @@ export default function TherapistSchedulePage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              console.log("🔍 Running debug test...");
+              const debugResult = await debugAuthAndFirestore();
+              const testResult = await testTherapistAvailabilityWrite();
+
+              alert(
+                `Debug: ${
+                  debugResult ? "Success" : "Failed"
+                }, Availability Test: ${testResult ? "Success" : "Failed"}`
+              );
+            }}
+          >
+            Debug Test
+          </Button>
+
           <Button variant="outline" onClick={loadScheduleData}>
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh

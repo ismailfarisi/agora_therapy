@@ -3,7 +3,7 @@
  * Handles video session management, token generation, and media controls
  */
 
-import AgoraRTC, {
+import type {
   IAgoraRTCClient,
   IAgoraRTCRemoteUser,
   ICameraVideoTrack,
@@ -11,6 +11,9 @@ import AgoraRTC, {
   ILocalTrack,
 } from "agora-rtc-sdk-ng";
 import { config } from "@/lib/config";
+
+// Dynamically import AgoraRTC to avoid SSR issues
+let AgoraRTC: typeof import("agora-rtc-sdk-ng").default;
 
 export interface VideoSessionConfig {
   appointmentId: string;
@@ -34,7 +37,7 @@ export interface VideoSessionState {
 }
 
 export class AgoraService {
-  private client: IAgoraRTCClient;
+  private client: IAgoraRTCClient | null = null;
   private localVideoTrack: ICameraVideoTrack | null = null;
   private localAudioTrack: IMicrophoneAudioTrack | null = null;
   private sessionConfig: VideoSessionConfig | null = null;
@@ -53,15 +56,30 @@ export class AgoraService {
   };
 
   constructor() {
-    this.client = AgoraRTC.createClient({
-      mode: "rtc",
-      codec: "vp8",
-    });
+    // Initialize client as null, will be created when needed
+    this.initializeAgoraRTC();
+  }
 
-    this.setupEventListeners();
+  private async initializeAgoraRTC() {
+    if (typeof window === "undefined") {
+      return; // Don't initialize on server side
+    }
+
+    try {
+      AgoraRTC = (await import("agora-rtc-sdk-ng")).default;
+      this.client = AgoraRTC.createClient({
+        mode: "rtc",
+        codec: "vp8",
+      });
+      this.setupEventListeners();
+    } catch (error) {
+      console.error("Failed to initialize Agora RTC:", error);
+    }
   }
 
   private setupEventListeners() {
+    if (!this.client) return;
+
     this.client.on("user-published", this.handleUserPublished.bind(this));
     this.client.on("user-unpublished", this.handleUserUnpublished.bind(this));
     this.client.on("user-joined", this.handleUserJoined.bind(this));
@@ -77,6 +95,7 @@ export class AgoraService {
     mediaType: "audio" | "video"
   ) => {
     try {
+      if (!this.client) return;
       await this.client.subscribe(user, mediaType);
       this.updateState({
         remoteUsers: this.client.remoteUsers,
@@ -93,6 +112,7 @@ export class AgoraService {
     user: IAgoraRTCRemoteUser,
     mediaType: "audio" | "video"
   ) => {
+    if (!this.client) return;
     this.updateState({
       remoteUsers: this.client.remoteUsers,
       participantCount:
@@ -103,6 +123,7 @@ export class AgoraService {
 
   private handleUserJoined = (user: IAgoraRTCRemoteUser) => {
     console.log("User joined:", user.uid);
+    if (!this.client) return;
     this.updateState({
       remoteUsers: this.client.remoteUsers,
       participantCount:
@@ -113,6 +134,7 @@ export class AgoraService {
 
   private handleUserLeft = (user: IAgoraRTCRemoteUser) => {
     console.log("User left:", user.uid);
+    if (!this.client) return;
     this.updateState({
       remoteUsers: this.client.remoteUsers,
       participantCount:
@@ -159,7 +181,9 @@ export class AgoraService {
     this.updateState({
       connectionStatus,
       isConnected,
-      participantCount: this.client.remoteUsers.length + (isConnected ? 1 : 0),
+      participantCount: this.client
+        ? this.client.remoteUsers.length + (isConnected ? 1 : 0)
+        : 0,
     });
 
     // Handle automatic reconnection on failure
@@ -197,7 +221,7 @@ export class AgoraService {
   }
 
   private async rejoinSession() {
-    if (!this.sessionConfig) {
+    if (!this.sessionConfig || !this.client) {
       throw new Error("No session config available for retry");
     }
 
@@ -254,11 +278,24 @@ export class AgoraService {
     uid: string
   ): Promise<string> {
     try {
+      console.log("🔧 [DEBUG] Starting token generation:", {
+        channelName,
+        uid,
+        timestamp: new Date().toISOString(),
+      });
+
+      const firebaseToken = await this.getFirebaseToken();
+      console.log("🔧 [DEBUG] Firebase token obtained:", {
+        tokenLength: firebaseToken.length,
+        isPlaceholder: firebaseToken === "firebase_token_placeholder",
+        tokenPrefix: firebaseToken.substring(0, 20) + "...",
+      });
+
       const response = await fetch("/api/agora/token", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${await this.getFirebaseToken()}`,
+          Authorization: `Bearer ${firebaseToken}`,
         },
         body: JSON.stringify({
           channelName,
@@ -266,8 +303,21 @@ export class AgoraService {
         }),
       });
 
+      console.log("🔧 [DEBUG] Token API response:", {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        headers: Object.fromEntries(response.headers.entries()),
+      });
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error("🔧 [DEBUG] Token API error:", {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          requestBody: { channelName, uid },
+        });
         throw new Error(
           `Failed to generate token: ${response.statusText} - ${
             errorData.error || "Unknown error"
@@ -276,41 +326,102 @@ export class AgoraService {
       }
 
       const { token } = await response.json();
+      console.log("🔧 [DEBUG] Token generated successfully:", {
+        tokenLength: token.length,
+        tokenPrefix: token.substring(0, 20) + "...",
+      });
       return token;
     } catch (error) {
-      console.error("Error generating Agora token:", error);
+      console.error("🔧 [DEBUG] Error generating Agora token:", error);
       throw error;
     }
   }
 
   private async getFirebaseToken(): Promise<string> {
-    // This would be implemented to get the current user's Firebase auth token
-    // For now, we'll return a placeholder - this should be injected from the component
-    return "firebase_token_placeholder";
+    console.log(
+      "🔧 [DEBUG] getFirebaseToken called - checking for auth context"
+    );
+
+    // Try to get Firebase auth token from the current context
+    try {
+      // Import Firebase auth dynamically to avoid SSR issues
+      const { getAuth } = await import("firebase/auth");
+      const { auth } = await import("@/lib/firebase/client");
+
+      const currentUser = getAuth().currentUser || auth.currentUser;
+
+      if (currentUser) {
+        console.log("🔧 [DEBUG] Found authenticated user, getting token");
+        const token = await currentUser.getIdToken();
+        console.log("🔧 [DEBUG] Retrieved valid Firebase token");
+        return token;
+      } else {
+        console.warn("🔧 [DEBUG] No authenticated user found");
+        throw new Error(
+          "No authenticated user - please ensure user is logged in before joining video session"
+        );
+      }
+    } catch (error) {
+      console.error("🔧 [DEBUG] Error getting Firebase token:", error);
+      throw new Error(
+        "Failed to get authentication token - please ensure you are logged in"
+      );
+    }
   }
 
   public async joinSession(
-    config: VideoSessionConfig,
+    videoConfig: VideoSessionConfig,
     firebaseToken?: string
   ): Promise<void> {
     try {
-      this.sessionConfig = config;
+      console.log("🔧 [DEBUG] Starting joinSession:", {
+        videoConfig,
+        firebaseTokenProvided: !!firebaseToken,
+        agoraAppId: config.agora.appId,
+        isPlaceholderAppId: config.agora.isPlaceholderAppId,
+        isPlaceholderCertificate: config.agora.isPlaceholderCertificate,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Ensure Agora RTC is initialized
+      if (!this.client) {
+        await this.initializeAgoraRTC();
+        if (!this.client) {
+          throw new Error("Failed to initialize Agora RTC client");
+        }
+      }
+
+      this.sessionConfig = videoConfig;
       this.retryAttempts = 0;
       this.updateState({ connectionStatus: "connecting" });
 
       // Override token getter if provided
       if (firebaseToken) {
+        console.log(
+          "🔧 [DEBUG] Overriding getFirebaseToken with provided token"
+        );
         this.getFirebaseToken = async () => firebaseToken;
       }
 
-      const token = await this.generateToken(config.channelName, config.userId);
-
-      await this.client.join(
-        config.agora.appId,
-        config.channelName,
-        token,
-        config.userId
+      const token = await this.generateToken(
+        videoConfig.channelName,
+        videoConfig.userId
       );
+
+      console.log("🔧 [DEBUG] Attempting to join Agora channel:", {
+        appId: config.agora.appId,
+        channelName: videoConfig.channelName,
+        userId: videoConfig.userId,
+        tokenLength: token,
+      });
+      this.client.join(
+        config.agora.appId,
+        videoConfig.channelName,
+        token,
+        parseInt(videoConfig.userId)
+      );
+
+      console.log("🔧 [DEBUG] Successfully joined Agora channel");
 
       // Create and publish local tracks
       await this.initializeLocalTracks();
@@ -320,8 +431,18 @@ export class AgoraService {
         connectionStatus: "connected",
         participantCount: this.client.remoteUsers.length + 1,
       });
+
+      console.log("🔧 [DEBUG] joinSession completed successfully");
     } catch (error) {
-      console.error("Error joining session:", error);
+      console.error("🔧 [DEBUG] Error joining session:", {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        config: {
+          appId: config.agora.appId,
+          channelName: videoConfig?.channelName,
+          userId: videoConfig?.userId,
+        },
+      });
       this.updateState({
         connectionStatus: "failed",
         isConnected: false,
@@ -338,6 +459,8 @@ export class AgoraService {
         clearTimeout(this.retryTimeout);
         this.retryTimeout = null;
       }
+
+      if (!this.client) return;
 
       // Unpublish local tracks
       if (this.localVideoTrack || this.localAudioTrack) {
@@ -373,6 +496,10 @@ export class AgoraService {
 
   private async initializeLocalTracks(): Promise<void> {
     try {
+      if (!AgoraRTC) {
+        throw new Error("Agora RTC not initialized");
+      }
+
       const [videoTrack, audioTrack] = await Promise.all([
         AgoraRTC.createCameraVideoTrack({ optimizationMode: "motion" }),
         AgoraRTC.createMicrophoneAudioTrack(),
@@ -381,7 +508,9 @@ export class AgoraService {
       this.localVideoTrack = videoTrack;
       this.localAudioTrack = audioTrack;
 
-      await this.client.publish([videoTrack, audioTrack]);
+      if (this.client) {
+        await this.client.publish([videoTrack, audioTrack]);
+      }
 
       this.updateState({
         isVideoEnabled: true,
@@ -413,8 +542,13 @@ export class AgoraService {
     if (!this.localVideoTrack) {
       // Try to create video track if it doesn't exist
       try {
+        if (!AgoraRTC) {
+          throw new Error("Agora RTC not initialized");
+        }
         this.localVideoTrack = await AgoraRTC.createCameraVideoTrack();
-        await this.client.publish([this.localVideoTrack as ILocalTrack]);
+        if (this.client) {
+          await this.client.publish([this.localVideoTrack as ILocalTrack]);
+        }
         this.updateState({ isVideoEnabled: true });
       } catch (error) {
         console.error("Error creating video track:", error);
@@ -435,8 +569,13 @@ export class AgoraService {
     if (!this.localAudioTrack) {
       // Try to create audio track if it doesn't exist
       try {
+        if (!AgoraRTC) {
+          throw new Error("Agora RTC not initialized");
+        }
         this.localAudioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-        await this.client.publish([this.localAudioTrack as ILocalTrack]);
+        if (this.client) {
+          await this.client.publish([this.localAudioTrack as ILocalTrack]);
+        }
         this.updateState({ isAudioEnabled: true });
       } catch (error) {
         console.error("Error creating audio track:", error);
@@ -491,7 +630,7 @@ export class AgoraService {
   }
 
   public getRemoteUsers(): IAgoraRTCRemoteUser[] {
-    return this.client.remoteUsers;
+    return this.client?.remoteUsers || [];
   }
 
   public getCurrentState(): VideoSessionState {

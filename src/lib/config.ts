@@ -29,6 +29,12 @@ export const config = {
       process.env.AGORA_TEMP_TOKEN_EXPIRY || "3600",
       10
     ),
+    // Add validation flags
+    isPlaceholderAppId:
+      process.env.NEXT_PUBLIC_AGORA_APP_ID ===
+      "18b75dafdbb0416f86cceb18232fb88d",
+    isPlaceholderCertificate:
+      process.env.AGORA_APP_CERTIFICATE === "addeb2f9ebd14ca5998e7fa9ef5bf202",
   },
 
   // Stripe Configuration
@@ -126,6 +132,41 @@ export function validateConfig() {
         "See SETUP.md for detailed configuration instructions."
     );
   }
+
+  // Check for placeholder Agora credentials
+  if (
+    config.agora.isPlaceholderAppId ||
+    config.agora.isPlaceholderCertificate
+  ) {
+    console.warn(
+      "🔧 [DEBUG] PLACEHOLDER AGORA CREDENTIALS DETECTED!\n" +
+        "The current Agora APP_ID and/or APP_CERTIFICATE are placeholder values.\n" +
+        "Video sessions will fail with 'invalid token, authorized failed' errors.\n" +
+        "Please replace with valid Agora credentials from https://console.agora.io/\n" +
+        `Current APP_ID: ${config.agora.appId}\n` +
+        `Current CERTIFICATE: ${config.agora.appCertificate?.substring(
+          0,
+          10
+        )}...`
+    );
+  }
+}
+
+// Export validation function to check Agora credentials
+export function validateAgoraCredentials() {
+  if (config.agora.isPlaceholderAppId) {
+    throw new Error(
+      "Agora APP_ID is using placeholder value. Please set NEXT_PUBLIC_AGORA_APP_ID with a valid Agora App ID from https://console.agora.io/"
+    );
+  }
+
+  if (config.agora.isPlaceholderCertificate) {
+    throw new Error(
+      "Agora APP_CERTIFICATE is using placeholder value. Please set AGORA_APP_CERTIFICATE with a valid Agora App Certificate from https://console.agora.io/"
+    );
+  }
+
+  console.log("🔧 [DEBUG] Agora credentials validation passed");
 }
 
 // Export individual configs for convenience

@@ -19,6 +19,7 @@ import {
   QuerySnapshot,
   getDoc,
   getDocs,
+  addDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
 import { collections, documents } from "@/lib/firebase/collections";
@@ -481,7 +482,11 @@ class RealtimeService {
 
     try {
       // Enhanced heartbeat with performance monitoring
-      await getDoc(doc(db, "heartbeat", "test"));
+      // Enhanced heartbeat with performance monitoring
+      await addDoc(collections.heartbeats(), {
+        clientId: this.clientId,
+        timestamp: serverTimestamp(),
+      });
       const latency = Date.now() - startTime;
 
       // Update performance metrics
@@ -499,13 +504,14 @@ class RealtimeService {
       // Process any buffered sync events
       await this.processSyncBuffer();
     } catch (error) {
+      console.error("gggggg error:", JSON.stringify(error, null, 2));
       this.updatePerformanceMetrics(0, false);
       this.handleConnectionError(error as Error);
     }
   }
 
   private handleConnectionError(error: Error): void {
-    console.error("Connection error:", error);
+    console.error("Connection error:", JSON.stringify(error, null, 2));
 
     this.updateConnectionStatus({
       isOnline: false,

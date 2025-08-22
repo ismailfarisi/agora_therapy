@@ -25,6 +25,9 @@ import { TherapistAvailability, TimeSlot } from "@/types/database";
 import { cn } from "@/lib/utils";
 import { getDayNames } from "@/lib/utils/calendar-utils";
 import { TimeSlotPicker } from "./TimeSlotPicker";
+import { timeslotService } from "@/lib/services/timeslot-service";
+import { createRecurringSchedule } from "@/lib/services/recurring-schedule-service";
+import { useAuth } from "@/lib/hooks/useAuth";
 import {
   Select,
   SelectContent,
@@ -72,6 +75,7 @@ export function RecurringScheduleSetup({
   onCancel,
   className,
 }: RecurringScheduleSetupProps) {
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(0);
   const [recurrencePattern, setRecurrencePattern] =
     useState<RecurrencePattern>("weekly");
@@ -83,9 +87,21 @@ export function RecurringScheduleSetup({
     "dayOfMonth"
   );
   const [copyFromDay, setCopyFromDay] = useState<number | null>(null);
+  const [availableTimeSlots, setAvailableTimeSlots] =
+    useState<TimeSlot[]>(timeSlots);
+  const [loadingTimeSlots, setLoadingTimeSlots] = useState(
+    timeSlots.length === 0
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const dayNames = getDayNames("long");
-  const daysOfWeek = [0, 1, 2, 3, 4, 5, 6]; // Sunday to Saturday
+  const daysOfWeek = [1, 2, 3, 4, 5, 6, 0]; // Sunday to Saturday
+
+  // Debug logging
+  console.log("🐛 RecurringScheduleSetup - Component rendered");
+  console.log("🐛 Props timeSlots:", timeSlots);
+  console.log("🐛 Available time slots state:", availableTimeSlots);
+  console.log("🐛 Loading time slots:", loadingTimeSlots);
 
   const steps: ScheduleStep[] = [
     {
@@ -113,6 +129,33 @@ export function RecurringScheduleSetup({
       completed: false,
     },
   ];
+
+  // Load time slots if not provided as props
+  useEffect(() => {
+    const loadTimeSlots = async () => {
+      if (timeSlots && timeSlots.length > 0) {
+        console.log("🐛 Using props time slots:", timeSlots);
+        setAvailableTimeSlots(timeSlots);
+        setLoadingTimeSlots(false);
+        return;
+      }
+
+      try {
+        console.log("🐛 Loading time slots from service...");
+        setLoadingTimeSlots(true);
+        const slots = await timeslotService.getAllTimeSlots();
+        console.log("🐛 Time slots loaded:", slots);
+        setAvailableTimeSlots(slots);
+      } catch (error) {
+        console.error("🐛 Error loading time slots:", error);
+        setAvailableTimeSlots([]);
+      } finally {
+        setLoadingTimeSlots(false);
+      }
+    };
+
+    loadTimeSlots();
+  }, [timeSlots]);
 
   // Initialize schedule from existing availability
   useEffect(() => {
@@ -158,7 +201,7 @@ export function RecurringScheduleSetup({
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     const scheduleData: RecurringScheduleData = {
       pattern: recurrencePattern,
       schedule: weeklySchedule,
@@ -176,7 +219,48 @@ export function RecurringScheduleSetup({
       }),
     };
 
-    onComplete?.(scheduleData);
+    try {
+      setIsSubmitting(true);
+      console.log(
+        "🔄 Starting recurring schedule completion with data:",
+        scheduleData
+      );
+      console.log("🔍 Available time slots state:", availableTimeSlots);
+      console.log("🔍 Weekly schedule:", weeklySchedule);
+
+      // Ensure user is authenticated
+      if (!user) {
+        throw new Error("User not authenticated. Please log in and try again.");
+      }
+
+      await createRecurringSchedule(
+        recurrencePattern,
+        weeklySchedule,
+        availableTimeSlots
+      );
+
+      console.log("✅ Successfully applied recurring schedule");
+      onComplete?.(scheduleData);
+    } catch (error) {
+      console.error("❌ Failed to create recurring schedule:", error);
+
+      // Show user-friendly error message
+      let errorMessage = "Failed to save schedule. ";
+      if (error instanceof Error) {
+        if (error.message.includes("permission-denied")) {
+          errorMessage +=
+            "Permission denied. Please ensure you are logged in as a therapist.";
+        } else if (error.message.includes("not authenticated")) {
+          errorMessage += "Please log in and try again.";
+        } else {
+          errorMessage += error.message;
+        }
+      }
+
+      alert(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const getTotalSlotsSelected = () => {
@@ -189,7 +273,7 @@ export function RecurringScheduleSetup({
   const getDayScheduleStats = (dayOfWeek: number) => {
     const slots = weeklySchedule[dayOfWeek] || [];
     const timeSlotDetails = slots
-      .map((id) => timeSlots.find((ts) => ts.id === id))
+      .map((id) => availableTimeSlots.find((ts) => ts.id === id))
       .filter(Boolean) as TimeSlot[];
 
     if (timeSlotDetails.length === 0) {
@@ -741,7 +825,7 @@ export function RecurringScheduleSetup({
               </div>
 
               <TimeSlotPicker
-                timeSlots={timeSlots}
+                timeSlots={availableTimeSlots}
                 selectedSlotIds={daySlots}
                 onSelectionChange={(slotIds) =>
                   handleDayScheduleChange(dayOfWeek, slotIds)
@@ -803,7 +887,9 @@ export function RecurringScheduleSetup({
 
                     <div className="flex flex-wrap gap-1 mt-2">
                       {slots.slice(0, 3).map((slotId) => {
-                        const slot = timeSlots.find((ts) => ts.id === slotId);
+                        const slot = availableTimeSlots.find(
+                          (ts) => ts.id === slotId
+                        );
                         return slot ? (
                           <Badge
                             key={slotId}
@@ -856,7 +942,9 @@ export function RecurringScheduleSetup({
                 return (
                   sum +
                   slots.reduce((slotSum: number, slotId: string) => {
-                    const slot = timeSlots.find((ts) => ts.id === slotId);
+                    const slot = availableTimeSlots.find(
+                      (ts) => ts.id === slotId
+                    );
                     return slotSum + (slot?.duration || 0);
                   }, 0)
                 );
@@ -891,6 +979,30 @@ export function RecurringScheduleSetup({
       )}
     </div>
   );
+
+  if (loadingTimeSlots) {
+    console.log("🐛 Still loading time slots...");
+    return (
+      <Card className={cn("w-full max-w-6xl mx-auto", className)}>
+        <CardContent className="p-6">
+          <div className="text-center">Loading time slots...</div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (availableTimeSlots.length === 0) {
+    console.log("🐛 No time slots available");
+    return (
+      <Card className={cn("w-full max-w-6xl mx-auto", className)}>
+        <CardContent className="p-6">
+          <div className="text-center text-amber-600">
+            ⚠️ No time slots available. Please check database setup.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className={cn("w-full max-w-6xl mx-auto", className)}>
@@ -980,10 +1092,10 @@ export function RecurringScheduleSetup({
             ) : (
               <Button
                 onClick={handleComplete}
-                disabled={getTotalSlotsSelected() === 0}
+                disabled={getTotalSlotsSelected() === 0 || isSubmitting}
               >
                 <Check className="h-4 w-4 mr-2" />
-                Apply Schedule
+                {isSubmitting ? "Applying..." : "Apply Schedule"}
               </Button>
             )}
           </div>

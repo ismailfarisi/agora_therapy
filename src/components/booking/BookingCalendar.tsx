@@ -9,6 +9,9 @@ import {
   isSameDay,
   isToday,
   isBefore,
+  startOfWeek,
+  endOfWeek,
+  isSameMonth,
 } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,6 +61,9 @@ export function BookingCalendar({
     });
 
     daysInCurrentMonth.forEach((date) => {
+      console.log(
+        `[BookingCalendar] Checking availability for date: ${date.toISOString()}`
+      );
       const availableSlotIds = getAvailableSlots(date);
       const dateKey = format(date, "yyyy-MM-dd");
       availabilityMap.set(dateKey, availableSlotIds.length);
@@ -66,10 +72,13 @@ export function BookingCalendar({
     return availabilityMap;
   }, [availability, currentMonth, getAvailableSlots]);
 
-  const daysInMonth = eachDayOfInterval({
-    start: startOfMonth(currentMonth),
-    end: endOfMonth(currentMonth),
-  });
+  const calendarDays = useMemo(() => {
+    const monthStart = startOfMonth(currentMonth);
+    return eachDayOfInterval({
+      start: startOfWeek(monthStart),
+      end: endOfWeek(endOfMonth(monthStart)),
+    });
+  }, [currentMonth]);
 
   const navigateMonth = (direction: "prev" | "next") => {
     const newMonth = new Date(currentMonth);
@@ -101,6 +110,12 @@ export function BookingCalendar({
   };
 
   const getDayContent = (date: Date) => {
+    const isInCurrentMonth = isSameMonth(date, currentMonth);
+
+    if (!isInCurrentMonth) {
+      return <div className="h-12 w-12 p-0" />;
+    }
+
     const dateKey = format(date, "yyyy-MM-dd");
     const slotCount = availabilityByDate.get(dateKey) || 0;
     const isSelected = selectedDate && isSameDay(date, selectedDate);
@@ -234,7 +249,7 @@ export function BookingCalendar({
 
         {/* Calendar Grid */}
         <div className="grid grid-cols-7 gap-1">
-          {daysInMonth.map((date) => (
+          {calendarDays.map((date) => (
             <div key={date.toISOString()} className="flex justify-center">
               {getDayContent(date)}
             </div>

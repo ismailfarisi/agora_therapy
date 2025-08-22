@@ -12,6 +12,7 @@ import { ConnectionStatus } from "./ConnectionStatus";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/hooks/useAuth";
 
 interface VideoSessionProps {
   appointmentId: string;
@@ -38,6 +39,9 @@ export function VideoSession({
 
   // Generate channel name based on appointment ID
   const channelName = `therapy_session_${appointmentId}`;
+
+  // Get authenticated user for Firebase token
+  const { user } = useAuth();
 
   useEffect(() => {
     const unsubscribe = agoraService.onStateChange(setSessionState);
@@ -78,8 +82,12 @@ export function VideoSession({
         channelName,
       };
 
-      // In a real implementation, you'd get the Firebase token from useAuth or similar
-      const firebaseToken = "placeholder_token";
+      // Get Firebase token from authenticated user
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
+
+      const firebaseToken = await user.getIdToken();
       await agoraService.joinSession(config, firebaseToken);
     } catch (err) {
       console.error("Failed to join session:", err);

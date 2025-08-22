@@ -3,11 +3,19 @@
  * Handles server-side Firebase operations with admin privileges
  */
 
-import { initializeApp, getApps, cert, App } from "firebase-admin/app";
+import {
+  initializeApp,
+  getApps,
+  cert,
+  App,
+  ServiceAccount,
+} from "firebase-admin/app";
+import { credential } from "firebase-admin";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { config } from "../config";
+import serviceAccount from "../../../firebase-admin.json";
 
 let adminApp: App;
 
@@ -17,12 +25,10 @@ function initializeFirebaseAdmin(): App {
     // Initialize with service account credentials
     adminApp = initializeApp({
       credential: cert({
-        projectId: config.firebaseAdmin.projectId,
-        clientEmail: config.firebaseAdmin.clientEmail,
-        privateKey: config.firebaseAdmin.privateKey,
+        projectId: config.firebase.projectId,
+        clientEmail: serviceAccount.client_email,
+        privateKey: serviceAccount.private_key,
       }),
-      projectId: config.firebaseAdmin.projectId,
-      storageBucket: config.firebase.storageBucket,
     });
   } else {
     adminApp = getApps()[0] as App;

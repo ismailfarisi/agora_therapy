@@ -37,7 +37,7 @@ import {
 import { VerificationStatus } from "@/components/therapist/VerificationStatus";
 import { ProfileCompletion } from "@/components/therapist/ProfileCompletion";
 import { DocumentUpload } from "@/components/therapist/DocumentUpload";
-import { AvailabilitySettings } from "@/components/therapist/AvailabilitySettings";
+import { EnhancedAvailabilityTab } from "@/components/therapist/schedule";
 
 // Import services and validation
 import {
@@ -201,9 +201,19 @@ export default function TherapistProfilePage() {
           ...profileData.credentials,
           licenseExpiry:
             profile?.credentials.licenseExpiry ||
-            new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Default 1 year from now
+            Timestamp.fromDate(
+              new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+            ), // Default 1 year from now
         },
-        practice: profileData.practice,
+        practice: {
+          ...profileData.practice,
+          sessionTypes: profileData.practice.sessionTypes as (
+            | "individual"
+            | "couples"
+            | "family"
+            | "group"
+          )[],
+        },
         availability: profileData.availability,
       };
 
@@ -709,93 +719,8 @@ export default function TherapistProfilePage() {
 
           {/* Rates & Availability Tab */}
           <TabsContent value="rates">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  Rates & Availability
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="hourlyRate">Hourly Rate</Label>
-                    <Input
-                      id="hourlyRate"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      value={profileData.practice.hourlyRate}
-                      onChange={(e) =>
-                        updateField(
-                          "practice",
-                          "hourlyRate",
-                          parseFloat(e.target.value) || 0
-                        )
-                      }
-                      placeholder="0.00"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="currency">Currency</Label>
-                    <Input
-                      id="currency"
-                      value={profileData.practice.currency}
-                      onChange={(e) =>
-                        updateField("practice", "currency", e.target.value)
-                      }
-                      placeholder="USD"
-                    />
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-blue-900 mb-2">
-                    Availability Settings
-                  </h4>
-                  <p className="text-sm text-blue-800">
-                    Detailed availability and scheduling preferences can be
-                    configured in your
-                    <Button
-                      variant="link"
-                      className="p-0 h-auto text-blue-800 underline ml-1"
-                    >
-                      schedule settings
-                    </Button>
-                    .
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Verification Status Tab */}
-          <TabsContent value="verification">
-            {profile && <VerificationStatus profile={profile} />}
-          </TabsContent>
-
-          {/* Documents Tab */}
-          <TabsContent value="documents">
-            {user?.uid && (
-              <DocumentUpload
-                therapistId={user.uid}
-                onUploadComplete={(result) => {
-                  toast.success(
-                    "Document Uploaded",
-                    `${result.filename} uploaded successfully`
-                  );
-                }}
-                onUploadError={(error) => {
-                  toast.error("Upload Failed", error);
-                }}
-              />
-            )}
-          </TabsContent>
-
-          {/* Availability Settings in Rates Tab */}
-          <TabsContent value="rates">
             <div className="space-y-6">
+              {/* Basic Rate Settings */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -839,22 +764,41 @@ export default function TherapistProfilePage() {
                 </CardContent>
               </Card>
 
-              {/* Availability Settings */}
-              {profile && (
-                <AvailabilitySettings
-                  profile={profile}
-                  onUpdateAvailability={(updates) => {
-                    setProfileData((prev) => ({
-                      ...prev,
-                      availability: {
-                        ...prev.availability,
-                        ...updates,
-                      },
-                    }));
-                  }}
-                />
-              )}
+              {/* Enhanced Availability Section */}
+              <EnhancedAvailabilityTab
+                profile={profile}
+                onUpdate={async (updates) => {
+                  if (user?.uid) {
+                    await TherapistService.saveProfile(user.uid, updates);
+                    await loadProfileData();
+                  }
+                }}
+                isLoading={loading}
+              />
             </div>
+          </TabsContent>
+
+          {/* Verification Status Tab */}
+          <TabsContent value="verification">
+            {profile && <VerificationStatus profile={profile} />}
+          </TabsContent>
+
+          {/* Documents Tab */}
+          <TabsContent value="documents">
+            {user?.uid && (
+              <DocumentUpload
+                therapistId={user.uid}
+                onUploadComplete={(result) => {
+                  toast.success(
+                    "Document Uploaded",
+                    `${result.filename} uploaded successfully`
+                  );
+                }}
+                onUploadError={(error) => {
+                  toast.error("Upload Failed", error);
+                }}
+              />
+            )}
           </TabsContent>
         </Tabs>
 

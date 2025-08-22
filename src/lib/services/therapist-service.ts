@@ -33,6 +33,7 @@ import {
   TherapistProfile,
   TherapistOnboardingData,
   TherapistSearchFilters,
+  TherapistAvailability,
 } from "@/types/database";
 
 export type ProfileCompletionData = {
@@ -417,6 +418,90 @@ export class TherapistService {
         isVerified: false,
       },
     };
+  }
+
+  /**
+   * Get therapist with availability data
+   */
+  static async getTherapistWithAvailability(therapistId: string): Promise<{
+    therapist: TherapistProfile | null;
+    availability: TherapistAvailability[];
+  }> {
+    try {
+      // Get therapist profile
+      const therapist = await this.getProfile(therapistId);
+
+      if (!therapist) {
+        return { therapist: null, availability: [] };
+      }
+
+      // Get therapist availability
+      const availabilityRef = collection(db, "therapistAvailability");
+      const availabilityQuery = query(
+        availabilityRef,
+        where("therapistId", "==", therapistId),
+        where("status", "==", "available")
+      );
+
+      const availabilitySnapshot = await getDocs(availabilityQuery);
+      const availability = availabilitySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as TherapistAvailability[];
+
+      return { therapist, availability };
+    } catch (error) {
+      console.error("Error fetching therapist with availability:", error);
+      return { therapist: null, availability: [] };
+    }
+  }
+
+  /**
+   * Get all therapists with their availability data
+   */
+  static async getAllTherapistsWithAvailability(): Promise<
+    Array<{
+      therapist: TherapistProfile;
+      availability: TherapistAvailability[];
+    }>
+  > {
+    try {
+      // Get all verified therapists
+      const therapists = await this.searchTherapists();
+
+      console.log(
+        `🔍 Found ${therapists.length} therapists, fetching availability...`
+      );
+
+      // Get availability for all therapists
+      const therapistsWithAvailability = await Promise.all(
+        therapists.map(async (therapist) => {
+          const availabilityRef = collection(db, "therapistAvailability");
+          const availabilityQuery = query(
+            availabilityRef,
+            where("therapistId", "==", therapist.id),
+            where("status", "==", "available")
+          );
+
+          const availabilitySnapshot = await getDocs(availabilityQuery);
+          const availability = availabilitySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          })) as TherapistAvailability[];
+
+          console.log(
+            `🔍 Therapist ${therapist.id}: ${availability.length} availability slots`
+          );
+
+          return { therapist, availability };
+        })
+      );
+
+      return therapistsWithAvailability;
+    } catch (error) {
+      console.error("Error fetching therapists with availability:", error);
+      return [];
+    }
   }
 }
 

@@ -45,7 +45,7 @@ export function generateCalendarMonth(
 ): CalendarMonth {
   const firstDayOfMonth = new Date(year, month, 1);
   const lastDayOfMonth = new Date(year, month + 1, 0);
-  const firstDayOfCalendar = startOfWeek(firstDayOfMonth, { weekStartsOn: 0 }); // Start on Sunday
+  const firstDayOfCalendar = startOfWeek(firstDayOfMonth, { weekStartsOn: 1 }); // Start on Sunday
 
   const weeks: CalendarWeek[] = [];
   let currentDate = new Date(firstDayOfCalendar);
@@ -98,7 +98,7 @@ export function generateCalendarMonth(
  * Get day names for calendar header
  */
 export function getDayNames(nameFormat: "short" | "long" = "short"): string[] {
-  const startDate = startOfWeek(new Date(), { weekStartsOn: 0 });
+  const startDate = startOfWeek(new Date(), { weekStartsOn: 1 });
   const dayNames: string[] = [];
 
   for (let i = 0; i < 7; i++) {

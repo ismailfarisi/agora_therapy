@@ -126,7 +126,9 @@ export class AvailableSlotsService {
     requestedDuration?: number
   ): Promise<EnhancedAvailableSlot[]> {
     const slots: EnhancedAvailableSlot[] = [];
-
+    console.log(
+      `[available-slots-service] calculateSlotsForDate: date=${date.toISOString()}`
+    );
     try {
       // Check if date is too far in advance or too soon
       const now = new Date();

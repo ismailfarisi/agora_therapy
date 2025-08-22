@@ -69,12 +69,18 @@ export function convertTimezone(
     throw new Error("Invalid date provided");
   }
 
-  // Convert to string in from timezone, then parse in to timezone
-  const utcTime = inputDate.getTime();
-  const fromOffset = getTimezoneOffset(fromTimezone) * 60000;
-  const toOffset = getTimezoneOffset(toTimezone) * 60000;
+  // Use toLocaleString for robust timezone conversion
+  const dateInFromTimezone = new Date(
+    inputDate.toLocaleString("en-US", { timeZone: fromTimezone })
+  );
 
-  return new Date(utcTime - fromOffset + toOffset);
+  const dateInToTimezone = new Date(
+    inputDate.toLocaleString("en-US", { timeZone: toTimezone })
+  );
+
+  const diff = dateInToTimezone.getTime() - dateInFromTimezone.getTime();
+
+  return new Date(inputDate.getTime() + diff);
 }
 
 /**

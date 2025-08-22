@@ -28,7 +28,8 @@ import {
   TimeSlot,
 } from "@/types/database";
 import { businessConfig } from "@/lib/config";
-import { TimeSlotService } from "./timeslot-service";
+import { TimeSlotService, timeslotService } from "./timeslot-service";
+import { toZonedTime } from "date-fns-tz";
 
 export class AvailabilityService {
   /**
@@ -342,7 +343,8 @@ export class AvailabilityService {
     effectiveSlots: string[]; // timeSlotIds that are actually available
   }> {
     try {
-      const dayOfWeek = date.getDay();
+      const therapistDate = toZonedTime(date, therapistTimezone || "UTC");
+      const dayOfWeek = therapistDate.getDay();
 
       // Get regular availability for this day of week
       const regularAvailability = await this.getAvailabilityForDay(
@@ -668,6 +670,124 @@ export class AvailabilityService {
       throw new Error("Max concurrent clients must be at least 1");
     }
   }
+  /**
+   * Instance-based methods for compatibility with existing components
+   */
+
+  constructor(
+    private timeslotService: {
+      getTimeSlotById: (id: string) => Promise<TimeSlot | null>;
+    }
+  ) {}
+
+  /**
+   * Create a single availability record (instance method)
+   */
+  async createAvailability(availabilityData: {
+    therapistId: string;
+    timeSlotId: string;
+    date: string;
+    timezone: string;
+    isAvailable?: boolean;
+    createdAt?: Date;
+    updatedAt?: Date;
+  }): Promise<string> {
+    try {
+      console.log("🔍 Creating availability with data:", availabilityData);
+
+      // Validate the availability data
+      await this.validateAvailability(availabilityData);
+
+      // Convert to the format expected by the static method
+      const date = new Date(availabilityData.date);
+      const dayOfWeek = date.getDay();
+
+      return await AvailabilityService.createAvailability({
+        therapistId: availabilityData.therapistId,
+        dayOfWeek,
+        timeSlotId: availabilityData.timeSlotId,
+        status:
+          availabilityData.isAvailable !== false ? "available" : "unavailable",
+        maxConcurrentClients: 1,
+        recurringPattern: { type: "weekly" },
+        metadata: {
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          notes: `Created for date: ${availabilityData.date}`,
+        },
+      });
+    } catch (error) {
+      console.error("Error creating availability:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Bulk set availability (instance method)
+   */
+  async bulkSetAvailability(
+    availabilityEntries: Array<{
+      therapistId: string;
+      timeSlotId: string;
+      date: string;
+      timezone: string;
+      isAvailable?: boolean;
+      createdAt?: Date;
+      updatedAt?: Date;
+    }>
+  ): Promise<string[]> {
+    try {
+      console.log(
+        "🔍 Bulk setting availability with entries:",
+        availabilityEntries
+      );
+
+      const createdIds: string[] = [];
+
+      for (const entry of availabilityEntries) {
+        const id = await this.createAvailability(entry);
+        createdIds.push(id);
+      }
+
+      return createdIds;
+    } catch (error) {
+      console.error("Error bulk setting availability:", error);
+      throw new Error("Failed to bulk set availability");
+    }
+  }
+
+  /**
+   * Validate availability data (instance method)
+   */
+  private async validateAvailability(availabilityData: {
+    therapistId: string;
+    timeSlotId: string;
+    date: string;
+    timezone: string;
+  }): Promise<void> {
+    const { therapistId, timeSlotId, date, timezone } = availabilityData;
+
+    console.log("🔍 Validating availability for:", {
+      therapistId,
+      timeSlotId,
+      date,
+      timezone,
+    });
+
+    // Validate time slot exists using the timeslot service instance
+    const timeSlot = await this.timeslotService.getTimeSlotById(timeSlotId);
+    console.log("🔍 Time slot lookup result:", timeSlot);
+    if (!timeSlot) {
+      console.error("❌ Time slot not found for ID:", timeSlotId);
+      throw new Error("Time slot not found");
+    }
+
+    console.log("✅ Time slot validation passed");
+  }
 }
 
+// Create a default instance for compatibility
+const availabilityService = new AvailabilityService(timeslotService);
+
 export default AvailabilityService;
+export { availabilityService };

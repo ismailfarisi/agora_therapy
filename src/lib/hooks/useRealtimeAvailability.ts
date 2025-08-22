@@ -18,6 +18,7 @@ import realtimeService, {
 } from "@/lib/services/realtime-service";
 import { useDebounce } from "@/lib/hooks/useDebounce";
 import { AppointmentService } from "@/lib/services/appointment-service";
+import { getDay } from "date-fns";
 
 interface UseRealtimeAvailabilityOptions {
   therapistId: string;
@@ -331,7 +332,7 @@ export function useRealtimeAvailability({
   // Calculate effective availability for a specific date
   const getEffectiveAvailability = useCallback(
     (date: Date) => {
-      const dayOfWeek = date.getDay();
+      const dayOfWeek = getDay(date);
       const dateKey = date.toDateString();
 
       // Get regular availability for this day

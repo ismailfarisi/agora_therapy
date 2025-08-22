@@ -87,6 +87,23 @@ export class TimeSlotService {
   }
 
   /**
+   * Get a specific time slot by ID (instance-compatible method)
+   */
+  static async getTimeSlotById(id: string): Promise<TimeSlot | null> {
+    console.log("🔍 Looking up time slot with ID:", id);
+
+    try {
+      // Use the existing getTimeSlot method
+      const timeSlot = await this.getTimeSlot(id);
+      console.log("✅ Found time slot:", timeSlot);
+      return timeSlot;
+    } catch (error) {
+      console.error("❌ Error fetching time slot by ID:", error);
+      return null;
+    }
+  }
+
+  /**
    * Create a new time slot
    */
   static async createTimeSlot(
@@ -468,4 +485,145 @@ export class TimeSlotService {
   }
 }
 
+// Create an instance-compatible wrapper for the existing components
+class TimeslotServiceInstance {
+  private static instance = new TimeslotServiceInstance();
+
+  static getInstance() {
+    return TimeslotServiceInstance.instance;
+  }
+
+  async getAllTimeSlots(): Promise<TimeSlot[]> {
+    console.log(
+      "🐛 TimeslotService - Fetching all time slots via class service..."
+    );
+    try {
+      const timeSlots = await TimeSlotService.getTimeSlots();
+      console.log("🐛 TimeslotService - Found time slots:", timeSlots);
+
+      // If no time slots exist, initialize some default ones
+      if (timeSlots.length === 0) {
+        console.log(
+          "🐛 TimeslotService - No time slots found, initializing defaults..."
+        );
+        await this.initializeDefaultTimeSlots();
+        return await TimeSlotService.getTimeSlots();
+      }
+
+      return timeSlots;
+    } catch (error) {
+      console.error("🐛 TimeslotService - Error fetching time slots:", error);
+      // Return empty array instead of throwing to prevent app crash
+      return [];
+    }
+  }
+
+  async initializeDefaultTimeSlots(): Promise<void> {
+    const defaultSlots: Omit<TimeSlot, "id">[] = [
+      {
+        startTime: "09:00",
+        endTime: "10:00",
+        duration: 60,
+        displayName: "9:00 AM - 10:00 AM",
+        isStandard: true,
+        sortOrder: 10,
+      },
+      {
+        startTime: "10:00",
+        endTime: "11:00",
+        duration: 60,
+        displayName: "10:00 AM - 11:00 AM",
+        isStandard: true,
+        sortOrder: 20,
+      },
+      {
+        startTime: "11:00",
+        endTime: "12:00",
+        duration: 60,
+        displayName: "11:00 AM - 12:00 PM",
+        isStandard: true,
+        sortOrder: 30,
+      },
+      {
+        startTime: "14:00",
+        endTime: "15:00",
+        duration: 60,
+        displayName: "2:00 PM - 3:00 PM",
+        isStandard: true,
+        sortOrder: 40,
+      },
+      {
+        startTime: "15:00",
+        endTime: "16:00",
+        duration: 60,
+        displayName: "3:00 PM - 4:00 PM",
+        isStandard: true,
+        sortOrder: 50,
+      },
+      {
+        startTime: "16:00",
+        endTime: "17:00",
+        duration: 60,
+        displayName: "4:00 PM - 5:00 PM",
+        isStandard: true,
+        sortOrder: 60,
+      },
+      {
+        startTime: "17:00",
+        endTime: "18:00",
+        duration: 60,
+        displayName: "5:00 PM - 6:00 PM",
+        isStandard: true,
+        sortOrder: 70,
+      },
+    ];
+
+    try {
+      console.log("🐛 TimeslotService - Creating default time slots...");
+      for (const slot of defaultSlots) {
+        await TimeSlotService.createTimeSlot(slot);
+      }
+      console.log(
+        "🐛 TimeslotService - Default time slots created successfully"
+      );
+    } catch (error) {
+      console.error(
+        "🐛 TimeslotService - Error initializing default time slots:",
+        error
+      );
+    }
+  }
+
+  async createTimeSlot(timeSlot: Omit<TimeSlot, "id">): Promise<string> {
+    console.log("🐛 TimeslotService - Creating time slot:", timeSlot);
+    try {
+      const id = await TimeSlotService.createTimeSlot(timeSlot);
+      console.log("🐛 TimeslotService - Time slot created with ID:", id);
+      return id;
+    } catch (error) {
+      console.error("🐛 TimeslotService - Error creating time slot:", error);
+      throw new Error("Failed to create time slot");
+    }
+  }
+
+  async updateTimeSlot(id: string, updates: Partial<TimeSlot>): Promise<void> {
+    return await TimeSlotService.updateTimeSlot(id, updates);
+  }
+
+  async deleteTimeSlot(id: string): Promise<void> {
+    return await TimeSlotService.deleteTimeSlot(id);
+  }
+
+  async getTimeSlotsByDuration(durationMinutes: number): Promise<TimeSlot[]> {
+    return await TimeSlotService.getTimeSlotsForDuration(durationMinutes);
+  }
+
+  async getTimeSlotById(id: string): Promise<TimeSlot | null> {
+    console.log("🔍 Instance - Looking up time slot with ID:", id);
+    return await TimeSlotService.getTimeSlotById(id);
+  }
+}
+
+// Export both the class service and the instance service for backwards compatibility
 export default TimeSlotService;
+export const timeslotService = TimeslotServiceInstance.getInstance();

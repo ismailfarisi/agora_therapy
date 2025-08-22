@@ -22,6 +22,7 @@ export const COLLECTIONS = {
   AUDIT_LOGS: "auditLogs",
   NOTIFICATIONS: "notifications",
   PAYMENT_INTENTS: "paymentIntents",
+  HEARTBEATS: "heartbeats",
 } as const;
 
 // Typed collection references
@@ -43,6 +44,8 @@ export const collections = {
     collection(db, COLLECTIONS.NOTIFICATIONS) as CollectionReference,
   paymentIntents: () =>
     collection(db, COLLECTIONS.PAYMENT_INTENTS) as CollectionReference,
+  heartbeats: () =>
+    collection(db, COLLECTIONS.HEARTBEATS) as CollectionReference,
 };
 
 // Typed document references
