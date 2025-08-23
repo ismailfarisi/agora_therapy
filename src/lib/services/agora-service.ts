@@ -414,16 +414,16 @@ export class AgoraService {
         userId: videoConfig.userId,
         tokenLength: token,
       });
-      this.client.join(
+      await this.client.join(
         config.agora.appId,
         videoConfig.channelName,
         token,
-        parseInt(videoConfig.userId)
+        videoConfig.userId
       );
 
       console.log("🔧 [DEBUG] Successfully joined Agora channel");
 
-      // Create and publish local tracks
+      // Create and publish local tracks after joining
       await this.initializeLocalTracks();
 
       this.updateState({
@@ -500,29 +500,161 @@ export class AgoraService {
         throw new Error("Agora RTC not initialized");
       }
 
-      const [videoTrack, audioTrack] = await Promise.all([
-        AgoraRTC.createCameraVideoTrack({ optimizationMode: "motion" }),
-        AgoraRTC.createMicrophoneAudioTrack(),
-      ]);
+      console.log("🔧 [DEBUG] Starting device diagnostics...");
 
-      this.localVideoTrack = videoTrack;
-      this.localAudioTrack = audioTrack;
+      // Check if media devices are available
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+        throw new Error("Media devices API not available");
+      }
 
-      if (this.client) {
-        await this.client.publish([videoTrack, audioTrack]);
+      // Check available devices
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(
+        (device) => device.kind === "videoinput"
+      );
+      const audioDevices = devices.filter(
+        (device) => device.kind === "audioinput"
+      );
+
+      console.log("🔧 [DEBUG] Available devices:", {
+        totalDevices: devices.length,
+        videoDevices: videoDevices.length,
+        audioDevices: audioDevices.length,
+        videoDeviceList: videoDevices.map((d) => ({
+          id: d.deviceId,
+          label: d.label || "Unknown",
+        })),
+        audioDeviceList: audioDevices.map((d) => ({
+          id: d.deviceId,
+          label: d.label || "Unknown",
+        })),
+      });
+
+      if (videoDevices.length === 0) {
+        console.warn("🔧 [DEBUG] No video devices found");
+      }
+
+      if (audioDevices.length === 0) {
+        console.warn("🔧 [DEBUG] No audio devices found");
+      }
+
+      // Check permissions before attempting to create tracks
+      console.log("🔧 [DEBUG] Checking media permissions...");
+      let permissionsGranted = false;
+
+      try {
+        const permissions = await Promise.all([
+          navigator.permissions
+            ?.query({ name: "camera" as PermissionName })
+            .catch(() => null),
+          navigator.permissions
+            ?.query({ name: "microphone" as PermissionName })
+            .catch(() => null),
+        ]);
+
+        console.log("🔧 [DEBUG] Permission states:", {
+          camera: permissions[0]?.state || "unknown",
+          microphone: permissions[1]?.state || "unknown",
+        });
+
+        permissionsGranted = permissions.some((p) => p?.state === "granted");
+      } catch (error) {
+        console.log(
+          "🔧 [DEBUG] Permission API not available, will attempt direct access"
+        );
+      }
+
+      // Attempt to create tracks
+      console.log("🔧 [DEBUG] Attempting to create media tracks...");
+
+      const trackPromises: Promise<
+        ICameraVideoTrack | IMicrophoneAudioTrack | null
+      >[] = [];
+
+      // Only attempt video track if we have video devices
+      if (videoDevices.length > 0) {
+        console.log("🔧 [DEBUG] Creating camera video track with config:", {
+          optimizationMode: "motion",
+        });
+        trackPromises.push(
+          AgoraRTC.createCameraVideoTrack({ optimizationMode: "motion" }).catch(
+            (error) => {
+              console.error("🔧 [DEBUG] Camera track creation failed:", error);
+              return null;
+            }
+          )
+        );
+      } else {
+        console.log(
+          "🔧 [DEBUG] Skipping video track creation - no video devices available"
+        );
+        trackPromises.push(Promise.resolve(null));
+      }
+
+      // Only attempt audio track if we have audio devices
+      if (audioDevices.length > 0) {
+        console.log("🔧 [DEBUG] Creating microphone audio track");
+        trackPromises.push(
+          AgoraRTC.createMicrophoneAudioTrack().catch((error) => {
+            console.error("🔧 [DEBUG] Audio track creation failed:", error);
+            return null;
+          })
+        );
+      } else {
+        console.log(
+          "🔧 [DEBUG] Skipping audio track creation - no audio devices available"
+        );
+        trackPromises.push(Promise.resolve(null));
+      }
+
+      const [videoTrack, audioTrack] = await Promise.all(trackPromises);
+
+      console.log("🔧 [DEBUG] Track creation results:", {
+        videoTrack: !!videoTrack,
+        audioTrack: !!audioTrack,
+        videoTrackId: videoTrack?.getTrackId?.() || "N/A",
+        audioTrackId: audioTrack?.getTrackId?.() || "N/A",
+      });
+
+      this.localVideoTrack = videoTrack as ICameraVideoTrack | null;
+      this.localAudioTrack = audioTrack as IMicrophoneAudioTrack | null;
+
+      // Only publish tracks that were successfully created
+      const tracksToPublish = [videoTrack, audioTrack].filter(
+        Boolean
+      ) as ILocalTrack[];
+
+      if (this.client && tracksToPublish.length > 0) {
+        console.log("🔧 [DEBUG] Publishing tracks:", tracksToPublish.length);
+        await this.client.publish(tracksToPublish);
+      } else if (tracksToPublish.length === 0) {
+        console.warn("🔧 [DEBUG] No tracks to publish");
       }
 
       this.updateState({
-        isVideoEnabled: true,
-        isAudioEnabled: true,
+        isVideoEnabled: !!videoTrack,
+        isAudioEnabled: !!audioTrack,
+      });
+
+      console.log("🔧 [DEBUG] Local tracks initialized successfully:", {
+        videoEnabled: !!videoTrack,
+        audioEnabled: !!audioTrack,
       });
     } catch (error) {
-      console.error("Error initializing local tracks:", error);
+      console.error("🔧 [DEBUG] Error initializing local tracks:", {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        name: error instanceof Error ? error.name : undefined,
+      });
+
       // Continue without local tracks if initialization fails
       this.updateState({
         isVideoEnabled: false,
         isAudioEnabled: false,
       });
+
+      // Re-throw the error so it can be handled by the caller
+      throw error;
     }
   }
 

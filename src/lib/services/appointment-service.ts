@@ -443,6 +443,18 @@ export class AppointmentService {
           },
         };
 
+        // 🔧 [DEBUG] Log appointment creation details
+        console.log("🔧 [DEBUG] Creating appointment with session data:", {
+          appointmentId: appointmentRef.id,
+          sessionType: appointmentData.session.type,
+          deliveryType: appointmentData.session.deliveryType,
+          platform: appointmentData.session.platform,
+          channelId: appointmentData.session.channelId,
+          hasJoinUrl: !!appointmentData.session.joinUrl,
+          joinUrl: appointmentData.session.joinUrl,
+          willButtonBeDisabled: !appointmentData.session.joinUrl,
+        });
+
         transaction.set(appointmentRef, appointmentData);
         return appointmentRef.id;
       });

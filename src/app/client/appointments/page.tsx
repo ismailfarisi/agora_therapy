@@ -42,6 +42,22 @@ export default function MySessionsPage() {
       setLoading(true);
       setError(null);
       const data = await AppointmentService.getClientAppointments(user!.uid);
+
+      // 🔧 [DEBUG] Log appointment data to diagnose joinUrl issue
+      console.log("🔧 [DEBUG] Loaded appointments:", {
+        count: data.length,
+        appointments: data.map((apt) => ({
+          id: apt.id,
+          status: apt.status,
+          sessionType: apt.session?.type,
+          sessionPlatform: apt.session?.platform,
+          channelId: apt.session?.channelId,
+          joinUrl: apt.session?.joinUrl,
+          hasJoinUrl: !!apt.session?.joinUrl,
+          buttonWillBeDisabled: !apt.session?.joinUrl,
+        })),
+      });
+
       setAppointments(data);
     } catch (err) {
       console.error("Error loading appointments:", err);
@@ -92,12 +108,12 @@ export default function MySessionsPage() {
 
   const isUpcoming = (appointment: Appointment) => {
     const appointmentDate = appointment.scheduledFor?.toDate?.() || new Date();
-    return appointmentDate > new Date() && appointment.status !== "cancelled";
+    return appointment.status !== "cancelled";
   };
 
   const isPast = (appointment: Appointment) => {
     const appointmentDate = appointment.scheduledFor?.toDate?.() || new Date();
-    return appointmentDate <= new Date() || appointment.status === "completed";
+    return appointment.status === "completed";
   };
 
   const isCancelled = (appointment: Appointment) => {
@@ -109,6 +125,16 @@ export default function MySessionsPage() {
   const cancelledAppointments = appointments.filter(isCancelled);
 
   const handleJoinSession = (appointment: Appointment) => {
+    // 🔧 [DEBUG] Log session joining details
+    console.log("🔧 [DEBUG] Attempting to join session:", {
+      appointmentId: appointment.id,
+      hasJoinUrl: !!appointment.session?.joinUrl,
+      joinUrl: appointment.session?.joinUrl,
+      channelId: appointment.session?.channelId,
+      sessionType: appointment.session?.type,
+      platform: appointment.session?.platform,
+    });
+
     setVideoSessionModal({
       isOpen: true,
       appointmentId: appointment.id,
@@ -194,7 +220,7 @@ export default function MySessionsPage() {
               <Button
                 onClick={() => handleJoinSession(appointment)}
                 className="flex items-center gap-2"
-                disabled={!appointment.session?.joinUrl}
+                disabled={appointment.status === "cancelled"}
               >
                 <Video className="h-4 w-4" />
                 Join Session

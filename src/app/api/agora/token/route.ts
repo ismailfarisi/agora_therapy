@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
       config.agora.appId,
       config.agora.appCertificate,
       channelName,
-      parseInt(uid),
+      uid,
       userRole,
       expirationTime,
       expirationTime
