@@ -38,6 +38,7 @@ interface BookingConfirmationProps {
   duration: number;
   therapistId: string;
   onBack?: () => void;
+  onProceedToPayment?: (notes: string) => void;
   onBookingComplete?: (appointmentId: string) => void;
   clientTimezone?: string;
 }
@@ -48,6 +49,7 @@ export function BookingConfirmation({
   duration,
   therapistId,
   onBack,
+  onProceedToPayment,
   onBookingComplete,
   clientTimezone,
 }: BookingConfirmationProps) {
@@ -79,6 +81,16 @@ export function BookingConfirmation({
     }
   };
 
+  const handleProceedToPayment = () => {
+    if (!user || !therapist) return;
+
+    setError(null);
+
+    // Call the payment handler with notes
+    onProceedToPayment?.(clientNotes.trim());
+  };
+
+  // Keep the old booking submission handler for backward compatibility
   const handleBookingSubmit = async () => {
     if (!user || !therapist) return;
 
@@ -327,7 +339,9 @@ export function BookingConfirmation({
         {/* Booking Actions */}
         <div className="flex flex-col gap-3">
           <Button
-            onClick={handleBookingSubmit}
+            onClick={
+              onProceedToPayment ? handleProceedToPayment : handleBookingSubmit
+            }
             disabled={submitting || !user}
             className="w-full"
             size="lg"
@@ -337,6 +351,8 @@ export function BookingConfirmation({
                 <LoadingSpinner size="sm" className="mr-2" />
                 Confirming Booking...
               </>
+            ) : onProceedToPayment ? (
+              "Proceed to Payment"
             ) : (
               "Confirm Booking"
             )}
@@ -344,8 +360,9 @@ export function BookingConfirmation({
 
           <div className="text-center">
             <p className="text-xs text-muted-foreground">
-              By confirming, you agree to our terms of service and cancellation
-              policy.
+              {onProceedToPayment
+                ? "You'll be taken to secure payment to complete your booking."
+                : "By confirming, you agree to our terms of service and cancellation policy."}
             </p>
           </div>
         </div>

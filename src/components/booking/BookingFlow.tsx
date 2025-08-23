@@ -4,11 +4,22 @@ import React, { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Calendar, Clock, User, CheckCircle } from "lucide-react";
+import {
+  ArrowLeft,
+  Calendar,
+  Clock,
+  User,
+  CreditCard,
+  CheckCircle,
+  AlertCircle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BookingCalendar } from "./BookingCalendar";
 import { TimeSlotSelector } from "./TimeSlotSelector";
 import { BookingConfirmation } from "./BookingConfirmation";
+import { PaymentStep } from "./PaymentStep";
+import { PaymentSuccess } from "./PaymentSuccess";
+import { PaymentError } from "./PaymentError";
 import {
   SessionType,
   TherapistProfile,
@@ -27,7 +38,12 @@ interface BookingFlowProps {
   className?: string;
 }
 
-type BookingStep = "calendar" | "timeSlot" | "confirmation" | "success";
+type BookingStep =
+  | "calendar"
+  | "timeSlot"
+  | "confirmation"
+  | "payment"
+  | "success";
 
 interface BookingState {
   selectedDate: Date | null;
@@ -40,6 +56,8 @@ interface BookingState {
   } | null;
   selectedSessionType: SessionType | null;
   notes: string;
+  paymentIntentId?: string;
+  paymentStatus?: "pending" | "succeeded" | "failed";
 }
 
 export const BookingFlow: React.FC<BookingFlowProps> = ({
@@ -97,8 +115,8 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   );
 
   const handleBookingConfirm = useCallback(
-    async (notes: string) => {
-      console.log("[BookingFlow] Starting booking confirmation process");
+    (notes: string) => {
+      console.log("[BookingFlow] Proceeding to payment step");
 
       if (
         !bookingState.selectedDate ||
@@ -118,80 +136,52 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         return;
       }
 
-      setIsSubmitting(true);
+      // Update booking state with notes and proceed to payment
+      setBookingState((prev) => ({ ...prev, notes }));
+      setCurrentStep("payment");
       setError(null);
+    },
+    [bookingState, user]
+  );
 
-      try {
-        console.log("[BookingFlow] Creating booking request", {
-          therapistId: therapist.id,
-          clientId: user.uid,
-          date: bookingState.selectedDate,
-          timeSlotId: bookingState.selectedSlot.id,
-          sessionType: bookingState.selectedSessionType,
-          notes: notes.trim(),
-        });
+  const handlePaymentSuccess = useCallback(
+    async (paymentIntentId: string, appointmentId: string) => {
+      console.log("[BookingFlow] Payment successful, booking confirmed");
 
-        // Create the booking request
-        const bookingRequest: BookingRequest = {
-          therapistId: therapist.id,
-          clientId: user.uid,
-          timeSlotId: bookingState.selectedSlot.id,
-          date: bookingState.selectedDate,
-          duration: 60, // Default duration - should be determined by session type
-          sessionType: bookingState.selectedSessionType,
-          clientNotes: notes.trim() || undefined,
-        };
+      setBookingId(appointmentId);
+      setBookingState((prev) => ({
+        ...prev,
+        paymentIntentId,
+        paymentStatus: "succeeded",
+      }));
+      setCurrentStep("success");
 
-        console.log(
-          "[BookingFlow] Calling AppointmentService.createAppointment"
-        );
-        const result = await AppointmentService.createAppointment(
-          bookingRequest
-        );
+      // Show success toast
+      toast.success(
+        "Booking Confirmed!",
+        "Your appointment has been scheduled successfully."
+      );
 
-        if (result.success && result.appointmentId) {
-          console.log(
-            "[BookingFlow] Booking created successfully:",
-            result.appointmentId
-          );
-
-          setBookingId(result.appointmentId);
-          setBookingState((prev) => ({ ...prev, notes }));
-          setCurrentStep("success");
-
-          // Show success toast
-          toast.success(
-            "Booking Confirmed!",
-            "Your appointment has been scheduled successfully."
-          );
-
-          if (onBookingComplete) {
-            onBookingComplete(result.appointmentId);
-          }
-        } else {
-          // Handle booking conflicts or errors
-          const errorMsg =
-            result.error ||
-            result.conflicts?.[0]?.message ||
-            "Failed to create booking";
-          console.error("[BookingFlow] Booking failed:", { result, errorMsg });
-
-          throw new Error(errorMsg);
-        }
-      } catch (err) {
-        console.error("[BookingFlow] Booking creation failed:", err);
-        const errorMessage =
-          err instanceof Error ? err.message : "Failed to create booking";
-        setError(errorMessage);
-
-        // Show error toast
-        toast.error("Booking Failed", errorMessage);
-      } finally {
-        setIsSubmitting(false);
-        console.log("[BookingFlow] Booking process completed");
+      if (onBookingComplete) {
+        onBookingComplete(appointmentId);
       }
     },
-    [bookingState, onBookingComplete, therapist.id, user, toast]
+    [onBookingComplete, toast]
+  );
+
+  const handlePaymentError = useCallback(
+    (error: string) => {
+      console.error("[BookingFlow] Payment failed:", error);
+      setError(error);
+      setBookingState((prev) => ({
+        ...prev,
+        paymentStatus: "failed",
+      }));
+
+      // Show error toast
+      toast.error("Payment Failed", error);
+    },
+    [toast]
   );
 
   const handleBack = useCallback(() => {
@@ -201,6 +191,9 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         break;
       case "confirmation":
         setCurrentStep("timeSlot");
+        break;
+      case "payment":
+        setCurrentStep("confirmation");
         break;
       case "success":
         // Don't allow going back from success
@@ -225,6 +218,8 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         return "Choose Time Slot";
       case "confirmation":
         return "Confirm Booking";
+      case "payment":
+        return "Complete Payment";
       case "success":
         return "Booking Confirmed";
       default:
@@ -239,7 +234,9 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
       case "timeSlot":
         return "Select an available time slot and session type";
       case "confirmation":
-        return "Review your booking details and confirm";
+        return "Review your booking details before payment";
+      case "payment":
+        return "Secure payment to complete your booking";
       case "success":
         return "Your appointment has been successfully scheduled";
       default:
@@ -291,13 +288,18 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
             { step: "calendar", icon: Calendar, label: "Date" },
             { step: "timeSlot", icon: Clock, label: "Time" },
             { step: "confirmation", icon: User, label: "Confirm" },
+            { step: "payment", icon: CreditCard, label: "Payment" },
             { step: "success", icon: CheckCircle, label: "Done" },
           ].map(({ step, icon: Icon, label }, index) => {
             const isActive = currentStep === step;
             const isCompleted =
-              ["calendar", "timeSlot", "confirmation", "success"].indexOf(
-                currentStep
-              ) > index;
+              [
+                "calendar",
+                "timeSlot",
+                "confirmation",
+                "payment",
+                "success",
+              ].indexOf(currentStep) > index;
 
             return (
               <div key={step} className="flex items-center">
@@ -325,7 +327,7 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                 >
                   {label}
                 </span>
-                {index < 3 && (
+                {index < 4 && (
                   <div
                     className={cn(
                       "ml-4 w-12 h-0.5",
@@ -339,7 +341,9 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
         </div>
 
         {/* Booking Summary */}
-        {(currentStep === "confirmation" || currentStep === "success") &&
+        {(currentStep === "confirmation" ||
+          currentStep === "payment" ||
+          currentStep === "success") &&
           bookingState.selectedDate && (
             <div className="bg-blue-50 p-4 rounded-lg">
               <div className="flex items-center space-x-2">
@@ -413,13 +417,43 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
               sessionType={bookingState.selectedSessionType!}
               duration={60}
               therapistId={therapist.id}
-              onBookingComplete={(appointmentId) => {
-                if (onBookingComplete) {
-                  onBookingComplete(appointmentId);
-                }
-              }}
+              onProceedToPayment={handleBookingConfirm}
               onBack={handleBack}
             />
+          )}
+
+        {currentStep === "payment" &&
+          bookingState.selectedDate &&
+          bookingState.selectedSlot &&
+          bookingState.selectedSessionType && (
+            <div>
+              <PaymentStep
+                bookingDetails={{
+                  therapistId: therapist.id,
+                  therapistName: `Dr. ${therapist.id}`,
+                  therapistImage: undefined,
+                  appointmentDate: bookingState.selectedDate,
+                  startTime: bookingState.selectedSlot.startTime,
+                  endTime: bookingState.selectedSlot.endTime,
+                  duration: 60,
+                  sessionType: bookingState.selectedSessionType,
+                  price: (therapist.practice?.hourlyRate || 0) * 100, // Convert to cents
+                  currency: therapist.practice?.currency || "USD",
+                  clientNotes: bookingState.notes || undefined,
+                  therapyType:
+                    therapist.credentials?.specializations?.[0] ||
+                    "General Therapy",
+                }}
+                onBack={handleBack}
+                onPaymentSuccess={(sessionId: string) => {
+                  // For now, we'll simulate creating an appointment ID
+                  // In a real implementation, this would come from the payment success webhook
+                  const appointmentId = `apt_${Date.now()}`;
+                  handlePaymentSuccess(sessionId, appointmentId);
+                }}
+                onPaymentError={handlePaymentError}
+              />
+            </div>
           )}
 
         {currentStep === "success" && bookingId && (

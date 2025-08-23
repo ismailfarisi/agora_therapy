@@ -159,6 +159,28 @@ export interface Appointment {
     status: PaymentStatus;
     transactionId?: string;
     method?: string;
+    // Enhanced Stripe payment tracking
+    stripeCheckoutSessionId?: string;
+    stripePaymentIntentId?: string;
+    stripeCustomerId?: string;
+    paymentRetryCount?: number;
+    lastPaymentAttempt?: Timestamp;
+    paymentFailureReasons?: string[];
+    refundStatus?: "none" | "pending" | "partial" | "full";
+    refundedAmount?: number;
+    paymentMethodDetails?: {
+      type: "card" | "bank_transfer" | "wallet";
+      card?: {
+        brand: string;
+        last4: string;
+        exp_month: number;
+        exp_year: number;
+        funding: "credit" | "debit" | "prepaid" | "unknown";
+      };
+      wallet?: {
+        type: "apple_pay" | "google_pay" | "link" | "paypal";
+      };
+    };
   };
 
   communication: {
@@ -229,7 +251,29 @@ export interface PaymentIntent {
   amount: number;
   currency: string;
   stripePaymentIntentId: string;
+  /** Stripe checkout session ID for tracking the complete payment flow */
+  stripeCheckoutSessionId?: string;
   status: PaymentStatus;
+  /** Payment method details from Stripe */
+  paymentMethodDetails?: {
+    type: "card" | "bank_transfer" | "wallet";
+    card?: {
+      brand: string;
+      last4: string;
+      exp_month: number;
+      exp_year: number;
+      funding: "credit" | "debit" | "prepaid" | "unknown";
+    };
+    wallet?: {
+      type: "apple_pay" | "google_pay" | "link" | "paypal";
+    };
+  };
+  /** Webhook events received for this payment intent */
+  webhookEvents?: PaymentWebhookEvent[];
+  /** Refund information if applicable */
+  refunds?: PaymentRefund[];
+  /** Metadata from Stripe payment intent */
+  stripeMetadata?: Record<string, string>;
   metadata: {
     createdAt: Timestamp;
     updatedAt: Timestamp;
@@ -327,5 +371,134 @@ export interface TherapistOnboardingData {
     bufferMinutes: number;
     maxDailyHours: number;
     advanceBookingDays: number;
+  };
+}
+
+/**
+ * Payment webhook event logging for audit trail
+ */
+export interface PaymentWebhookEvent {
+  id: string;
+  /** Stripe webhook event ID */
+  stripeEventId: string;
+  /** Type of webhook event received */
+  eventType: string;
+  /** Stripe object that triggered the event */
+  objectId: string;
+  /** Raw webhook payload for debugging */
+  payload: Record<string, unknown>;
+  /** Processing status of the webhook */
+  processed: boolean;
+  /** Error message if processing failed */
+  error?: string;
+  /** Related appointment ID if applicable */
+  appointmentId?: string;
+  /** Related payment intent ID if applicable */
+  paymentIntentId?: string;
+  /** Timestamp when webhook was received */
+  receivedAt: Timestamp;
+  /** Timestamp when webhook was processed */
+  processedAt?: Timestamp;
+}
+
+/**
+ * Payment refund information
+ */
+export interface PaymentRefund {
+  id: string;
+  /** Stripe refund ID */
+  stripeRefundId: string;
+  /** Amount refunded in cents */
+  amount: number;
+  /** Currency of the refund */
+  currency: string;
+  /** Reason for the refund */
+  reason: "duplicate" | "fraudulent" | "requested_by_customer";
+  /** Status of the refund from Stripe */
+  status: "pending" | "succeeded" | "failed" | "canceled";
+  /** Failure reason if refund failed */
+  failureReason?: string;
+  /** Metadata associated with the refund */
+  metadata?: Record<string, string>;
+  /** Timestamp when refund was created */
+  createdAt: Timestamp;
+  /** Timestamp when refund was last updated */
+  updatedAt: Timestamp;
+}
+
+/**
+ * Payment status transition tracking for audit purposes
+ */
+export interface PaymentStatusTransition {
+  id: string;
+  /** Related appointment ID */
+  appointmentId: string;
+  /** Related payment intent ID */
+  paymentIntentId?: string;
+  /** Previous payment status */
+  fromStatus: string;
+  /** New payment status */
+  toStatus: string;
+  /** Reason for status change */
+  reason?: string;
+  /** Additional context or metadata */
+  metadata?: Record<string, unknown>;
+  /** User or system that triggered the change */
+  triggeredBy: string;
+  /** Timestamp of the transition */
+  transitionedAt: Timestamp;
+}
+
+/**
+ * Failed payment retry tracking
+ */
+export interface PaymentRetryAttempt {
+  id: string;
+  /** Related appointment ID */
+  appointmentId: string;
+  /** Related payment intent ID */
+  paymentIntentId?: string;
+  /** Attempt number (1, 2, 3, etc.) */
+  attemptNumber: number;
+  /** Stripe error code if available */
+  errorCode?: string;
+  /** Human-readable error message */
+  errorMessage?: string;
+  /** Payment method used for this attempt */
+  paymentMethod?: {
+    type: string;
+    last4?: string;
+    brand?: string;
+  };
+  /** Whether this was an automated retry */
+  isAutomaticRetry: boolean;
+  /** Next scheduled retry timestamp */
+  nextRetryAt?: Timestamp;
+  /** Current retry status */
+  status: "failed" | "pending" | "abandoned";
+  /** Timestamp of this retry attempt */
+  attemptedAt: Timestamp;
+}
+
+/**
+ * Enhanced User interface with Stripe integration
+ * Extends the existing User interface with payment-related fields
+ */
+export interface UserPaymentProfile {
+  /** Stripe customer ID for payment processing */
+  stripeCustomerId?: string;
+  /** Stripe account ID for therapists receiving payments */
+  stripeAccountId?: string;
+  /** Payment method preferences */
+  paymentMethods?: {
+    preferred?: string;
+    savedMethods?: string[];
+  };
+  /** Payment history summary */
+  paymentSummary?: {
+    totalSpent?: number;
+    totalEarned?: number;
+    currency: string;
+    lastPaymentDate?: Timestamp;
   };
 }
