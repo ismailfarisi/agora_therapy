@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -40,9 +40,15 @@ export default function LoginPage() {
 
   const redirectTo = searchParams.get("redirect") || "/";
 
-  // Redirect if already authenticated
+  // Handle redirect in useEffect to avoid calling router.push during render
+  useEffect(() => {
+    if (user && !authLoading) {
+      router.push(redirectTo);
+    }
+  }, [user, authLoading, router, redirectTo]);
+
+  // Prevent render flash while redirecting
   if (user && !authLoading) {
-    router.push(redirectTo);
     return null;
   }
 

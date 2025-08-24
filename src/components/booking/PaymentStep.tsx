@@ -8,6 +8,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, User, CreditCard, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
+import { useAuth } from "@/lib/hooks/useAuth";
 
 export interface BookingDetails {
   therapistId: string;
@@ -39,6 +40,7 @@ export function PaymentStep({
 }: PaymentStepProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
   const formatPrice = (price: number, currency: string) => {
     return new Intl.NumberFormat("en-US", {
@@ -67,10 +69,29 @@ export function PaymentStep({
     setError(null);
 
     try {
+      // Check if user is authenticated
+      if (!user) {
+        setError("You must be logged in to make a payment");
+        setIsProcessing(false);
+        return;
+      }
+
+      // Get Firebase ID token
+      let token: string;
+      try {
+        token = await user.getIdToken();
+      } catch (tokenError) {
+        console.error("Failed to get ID token:", tokenError);
+        setError("Authentication error. Please try logging in again.");
+        setIsProcessing(false);
+        return;
+      }
+
       const response = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({
           therapistId: bookingDetails.therapistId,
@@ -79,7 +100,7 @@ export function PaymentStep({
           appointmentDate: format(bookingDetails.appointmentDate, "yyyy-MM-dd"),
           appointmentTime: bookingDetails.startTime,
           duration: bookingDetails.duration,
-          amount: bookingDetails.price / 100, // Convert from cents to dollars
+          amount: Math.max(bookingDetails.price / 100, 1), // Ensure minimum $1 for testing
           currency: bookingDetails.currency,
           clientName: "Client Name", // This should come from user data
           clientEmail: "client@example.com", // This should come from user data

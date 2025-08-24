@@ -145,25 +145,88 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
   );
 
   const handlePaymentSuccess = useCallback(
-    async (paymentIntentId: string, appointmentId: string) => {
-      console.log("[BookingFlow] Payment successful, booking confirmed");
+    async (sessionId: string, tempId: string) => {
+      console.log("[BookingFlow] Payment successful, waiting for appointment creation");
+      setIsSubmitting(true);
 
-      setBookingId(appointmentId);
-      setBookingState((prev) => ({
-        ...prev,
-        paymentIntentId,
-        paymentStatus: "succeeded",
-      }));
-      setCurrentStep("success");
+      try {
+        // Poll for the real appointment created by webhook
+        const maxAttempts = 30; // 30 seconds maximum wait
+        const pollInterval = 1000; // 1 second intervals
+        
+        let realAppointmentId = null;
+        let attempts = 0;
+        
+        while (attempts < maxAttempts && !realAppointmentId) {
+          try {
+            // Query appointments collection for appointment with matching sessionId
+            const response = await fetch(`/api/appointments/by-session/${sessionId}`);
+            
+            if (response.ok) {
+              const data = await response.json();
+              if (data.appointmentId) {
+                realAppointmentId = data.appointmentId;
+                break;
+              }
+            }
+          } catch (pollError) {
+            console.warn('Error polling for appointment:', pollError);
+          }
+          
+          attempts++;
+          if (attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+          }
+        }
+        
+        if (realAppointmentId) {
+          console.log("[BookingFlow] Real appointment found:", realAppointmentId);
+          
+          setBookingId(realAppointmentId);
+          setBookingState((prev) => ({
+            ...prev,
+            paymentIntentId: sessionId,
+            paymentStatus: "succeeded",
+          }));
+          setCurrentStep("success");
 
-      // Show success toast
-      toast.success(
-        "Booking Confirmed!",
-        "Your appointment has been scheduled successfully."
-      );
+          // Show success toast
+          toast.success(
+            "Booking Confirmed!",
+            "Your appointment has been scheduled successfully."
+          );
 
-      if (onBookingComplete) {
-        onBookingComplete(appointmentId);
+          if (onBookingComplete) {
+            onBookingComplete(realAppointmentId);
+          }
+        } else {
+          // Fallback: Payment succeeded but appointment creation is taking longer
+          console.warn("[BookingFlow] Appointment not found after polling, showing payment success");
+          
+          setBookingId(sessionId); // Use session ID as temporary identifier
+          setBookingState((prev) => ({
+            ...prev,
+            paymentIntentId: sessionId,
+            paymentStatus: "succeeded",
+          }));
+          setCurrentStep("success");
+
+          toast.success(
+            "Payment Confirmed!",
+            "Your payment was successful. We're setting up your appointment - you'll receive confirmation shortly."
+          );
+        }
+      } catch (error) {
+        console.error("[BookingFlow] Error handling payment success:", error);
+        setError("Payment was successful, but there was an issue creating your appointment. Please contact support with session ID: " + sessionId);
+        
+        // Show error toast but indicate payment was successful
+        toast.error(
+          "Appointment Setup Issue",
+          "Your payment was processed, but we couldn't immediately create your appointment. Please contact support."
+        );
+      } finally {
+        setIsSubmitting(false);
       }
     },
     [onBookingComplete, toast]
@@ -446,10 +509,8 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                 }}
                 onBack={handleBack}
                 onPaymentSuccess={(sessionId: string) => {
-                  // For now, we'll simulate creating an appointment ID
-                  // In a real implementation, this would come from the payment success webhook
-                  const appointmentId = `apt_${Date.now()}`;
-                  handlePaymentSuccess(sessionId, appointmentId);
+                  // Wait for webhook to create the appointment and return the real appointment ID
+                  handlePaymentSuccess(sessionId, sessionId); // Use sessionId temporarily until we get real appointmentId
                 }}
                 onPaymentError={handlePaymentError}
               />
@@ -464,17 +525,22 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
 
             <div className="space-y-2">
               <h3 className="text-2xl font-semibold text-green-900">
-                Booking Confirmed!
+                {bookingId?.startsWith('cs_') ? 'Payment Confirmed!' : 'Booking Confirmed!'}
               </h3>
               <p className="text-gray-600">
-                Your appointment has been successfully scheduled.
+                {bookingId?.startsWith('cs_')
+                  ? 'Your payment was successful. We\'re setting up your appointment now.'
+                  : 'Your appointment has been successfully scheduled.'
+                }
               </p>
             </div>
 
             <div className="bg-gray-50 p-6 rounded-lg max-w-md mx-auto">
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Booking ID:</span>
+                  <span className="text-gray-600">
+                    {bookingId?.startsWith('cs_') ? 'Payment Session:' : 'Booking ID:'}
+                  </span>
                   <span className="font-mono">{bookingId}</span>
                 </div>
                 <div className="flex justify-between">
@@ -494,6 +560,15 @@ export const BookingFlow: React.FC<BookingFlowProps> = ({
                   </div>
                 )}
               </div>
+              
+              {bookingId?.startsWith('cs_') && (
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-xs text-blue-700">
+                    Your payment has been confirmed. We're currently setting up your appointment
+                    and you'll receive a confirmation email with your appointment ID shortly.
+                  </p>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3">

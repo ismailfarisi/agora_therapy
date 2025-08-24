@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe/server";
-
 import Stripe from "stripe";
 import { getAdminFirestore } from "@/lib/firebase/admin";
 import { Timestamp } from "firebase-admin/firestore";
@@ -9,89 +8,9 @@ import type { WebhookResponse, WebhookError } from "@/types/stripe-api";
 // Store processed webhook IDs to handle idempotency
 const processedWebhooks = new Set<string>();
 
-interface AppointmentMetadata {
-  appointmentRef: string;
-  therapistId: string;
-  therapistName: string;
-  therapistEmail: string;
-  clientId: string;
-  clientName: string;
-  clientEmail: string;
-  appointmentDate: string;
-  appointmentTime: string;
-  duration: string;
-  notes?: string;
-}
+// AppointmentMetadata interface removed - using checkout session metadata directly
 
-async function createAppointment(
-  metadata: AppointmentMetadata,
-  paymentIntentId: string,
-  amount?: number
-) {
-  try {
-    // Validate required metadata fields
-    if (
-      !metadata.therapistId ||
-      !metadata.clientId ||
-      !metadata.appointmentDate
-    ) {
-      throw new Error("Missing required appointment metadata");
-    }
-
-    const db = getAdminFirestore();
-    const appointmentData = {
-      therapistId: metadata.therapistId,
-      clientId: metadata.clientId,
-      scheduledFor: Timestamp.fromDate(
-        new Date(`${metadata.appointmentDate}T${metadata.appointmentTime}`)
-      ),
-      duration: parseInt(metadata.duration),
-      status: "confirmed" as const,
-      payment: {
-        amount: amount || 0,
-        currency: "usd",
-        status: "paid" as const,
-        transactionId: paymentIntentId,
-        method: "card",
-      },
-      session: {
-        type: "individual" as const,
-        deliveryType: "video" as const,
-        platform: "agora" as const,
-      },
-      communication: {
-        clientNotes: metadata.notes || "",
-        therapistNotes: "",
-        remindersSent: {
-          email: [],
-          sms: [],
-        },
-      },
-      metadata: {
-        createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now(),
-        confirmedAt: Timestamp.now(),
-      },
-      // Additional fields for tracking
-      appointmentRef: metadata.appointmentRef,
-      therapistName: metadata.therapistName,
-      clientName: metadata.clientName,
-      clientEmail: metadata.clientEmail,
-    };
-
-    // Create appointment document
-    const appointmentRef = db.collection("appointments").doc();
-    await appointmentRef.set(appointmentData);
-
-    console.log(
-      `Appointment created: ${appointmentRef.id} for ${metadata.appointmentRef}`
-    );
-    return appointmentRef.id;
-  } catch (error) {
-    console.error("Error creating appointment:", error);
-    throw error;
-  }
-}
+// Removed createAppointment function - now using AppointmentService.createAppointmentAfterPayment
 
 async function updateAppointmentPaymentStatus(
   appointmentRef: string,
@@ -158,8 +77,17 @@ export async function POST(request: NextRequest) {
         signature,
         process.env.STRIPE_WEBHOOK_SECRET
       );
+      console.log('✅ Webhook signature verified:', {
+        eventType: event.type,
+        eventId: event.id
+      });
     } catch (error) {
-      console.error("Webhook signature verification failed:", error);
+      console.error("❌ Webhook signature verification failed:", {
+        error: error instanceof Error ? error.message : error,
+        hasSignature: !!signature,
+        hasSecret: !!process.env.STRIPE_WEBHOOK_SECRET,
+        bodyLength: body.length
+      });
       return NextResponse.json<WebhookError>(
         { error: "Invalid signature" },
         { status: 400 }
@@ -179,30 +107,158 @@ export async function POST(request: NextRequest) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
 
+        console.log('✅ Processing checkout.session.completed:', {
+          sessionId: session.id,
+          paymentStatus: session.payment_status,
+          hasMetadata: !!session.metadata,
+          metadataKeys: session.metadata ? Object.keys(session.metadata) : []
+        });
+
         if (session.payment_status === "paid" && session.metadata) {
           try {
-            const metadata = session.metadata as unknown as AppointmentMetadata;
+            const metadata = session.metadata;
 
-            // Retrieve payment intent to get amount
-            if (session.payment_intent) {
-              const paymentIntent = await stripe.paymentIntents.retrieve(
-                session.payment_intent as string
-              );
-
-              // Create appointment with payment amount
-              await createAppointment(
-                metadata,
-                paymentIntent.id,
-                paymentIntent.amount / 100 // Convert from cents
+            // Validate required fields
+            const requiredFields = ['appointmentDate', 'appointmentTime', 'duration', 'therapistId', 'clientId'];
+            const missingFields = requiredFields.filter(field => !metadata[field]);
+            
+            if (missingFields.length > 0) {
+              console.error('❌ Missing required metadata fields:', {
+                missing: missingFields,
+                available: Object.keys(metadata)
+              });
+              return NextResponse.json(
+                {
+                  error: 'Missing required appointment metadata',
+                  missing: missingFields,
+                  sessionId: session.id
+                },
+                { status: 400 }
               );
             }
-          } catch (error) {
-            console.error(
-              "Error processing checkout.session.completed:",
-              error
+
+            // Retrieve payment intent to get amount
+            if (!session.payment_intent) {
+              console.error('❌ No payment intent found in session:', session.id);
+              return NextResponse.json(
+                {
+                  error: 'No payment intent found',
+                  sessionId: session.id
+                },
+                { status: 400 }
+              );
+            }
+
+            const paymentIntent = await stripe.paymentIntents.retrieve(
+              session.payment_intent as string
             );
-            // Don't return error - let Stripe know we received the event
+
+            // Convert metadata to BookingRequest format expected by appointment service
+            const appointmentDateTime = new Date(`${metadata.appointmentDate}T${metadata.appointmentTime}`);
+            
+            if (isNaN(appointmentDateTime.getTime())) {
+              throw new Error(`Invalid appointment date/time: ${metadata.appointmentDate}T${metadata.appointmentTime}`);
+            }
+
+            const bookingRequest = {
+              therapistId: metadata.therapistId,
+              clientId: metadata.clientId,
+              date: appointmentDateTime,
+              duration: parseInt(metadata.duration),
+              sessionType: 'individual' as const, // Default to individual session
+              timeSlotId: `${appointmentDateTime.getHours()}:${appointmentDateTime.getMinutes().toString().padStart(2, '0')}`, // Generate timeSlot from time
+              clientNotes: metadata.notes || '',
+            };
+
+            console.log('📝 Creating appointment with booking request:', {
+              ...bookingRequest,
+              date: bookingRequest.date.toISOString()
+            });
+
+            // Create appointment directly using admin SDK since webhook runs server-side
+            const db = getAdminFirestore();
+            
+            // Create appointment reference
+            const appointmentRef = db.collection('appointments').doc();
+            const appointmentId = appointmentRef.id;
+            
+            // Create appointment data
+            const appointmentData = {
+              id: appointmentId,
+              therapistId: bookingRequest.therapistId,
+              clientId: bookingRequest.clientId,
+              scheduledFor: Timestamp.fromDate(bookingRequest.date),
+              timeSlotId: bookingRequest.timeSlotId,
+              duration: bookingRequest.duration,
+              status: "confirmed",
+              session: {
+                type: bookingRequest.sessionType,
+                deliveryType: "video",
+                platform: "agora",
+                channelId: `therapy_session_${appointmentId}`,
+              },
+              payment: {
+                amount: paymentIntent.amount / 100, // Convert from cents to dollars
+                currency: paymentIntent.currency.toLowerCase(),
+                status: "paid",
+                transactionId: paymentIntent.id,
+                method: "card",
+              },
+              communication: {
+                clientNotes: bookingRequest.clientNotes || "",
+                remindersSent: {
+                  email: [],
+                  sms: [],
+                },
+              },
+              metadata: {
+                createdAt: Timestamp.now(),
+                updatedAt: Timestamp.now(),
+                confirmedAt: Timestamp.now(),
+              },
+              paymentSessionId: session.id, // Add session ID for lookup
+            };
+
+            // Save appointment to database
+            await appointmentRef.set(appointmentData);
+
+            console.log('✅ Appointment created successfully:', {
+              appointmentId,
+              sessionId: session.id,
+              paymentIntentId: paymentIntent.id,
+              amount: paymentIntent.amount / 100,
+              currency: paymentIntent.currency
+            });
+
+            return NextResponse.json({
+              received: true,
+              appointmentId,
+              message: 'Appointment created successfully'
+            });
+
+          } catch (error) {
+            console.error('❌ Error processing checkout.session.completed:', {
+              sessionId: session.id,
+              error: error instanceof Error ? error.message : error,
+              stack: error instanceof Error ? error.stack : undefined
+            });
+            
+            // Return error response to Stripe so it knows the webhook failed
+            return NextResponse.json(
+              {
+                error: 'Failed to create appointment after payment',
+                sessionId: session.id,
+                details: error instanceof Error ? error.message : 'Unknown error'
+              },
+              { status: 500 }
+            );
           }
+        } else {
+          console.log('ℹ️ Checkout session not paid or missing metadata:', {
+            sessionId: session.id,
+            paymentStatus: session.payment_status,
+            hasMetadata: !!session.metadata
+          });
         }
         break;
       }

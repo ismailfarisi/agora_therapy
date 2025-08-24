@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { Video, Shield, Clock, Users, CheckCircle, Star } from "lucide-react";
+import { PaymentAuthTest } from "@/components/PaymentAuthTest";
 
 export default function Home() {
   const { user, userData } = useAuth();
@@ -223,6 +224,21 @@ export default function Home() {
               </Link>
             )}
           </div>
+        </div>
+      </section>
+
+      {/* Payment Test Section - Temporary for debugging */}
+      <section className="px-4 py-8 sm:px-6 lg:px-8 bg-yellow-50">
+        <div className="max-w-2xl mx-auto">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Payment Authorization Test
+            </h2>
+            <p className="text-sm text-gray-600">
+              This is a temporary test component to verify payment authorization is working
+            </p>
+          </div>
+          <PaymentAuthTest />
         </div>
       </section>
 
