@@ -126,7 +126,7 @@ export default function RegisterPage() {
 
       // Redirect to appropriate onboarding or dashboard
       if (formData.role === "therapist") {
-        router.push("/therapist/onboarding");
+        router.push("/onboarding");
       } else {
         router.push("/");
       }
