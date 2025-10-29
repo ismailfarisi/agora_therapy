@@ -23,11 +23,39 @@ import {
   TrendingUp,
   DollarSign,
   AlertTriangle,
+  CreditCard,
+  MessageSquare,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { PlatformStats } from "@/types/database";
 
 export default function AdminDashboard() {
   const { user, userData, loading } = useAuth();
+  const [stats, setStats] = useState<PlatformStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    if (user && userData?.role === 'admin') {
+      fetchStats();
+    }
+  }, [user, userData]);
+
+  const fetchStats = async () => {
+    try {
+      setStatsLoading(true);
+      const response = await fetch('/api/admin/stats');
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data);
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    } finally {
+      setStatsLoading(false);
+    }
+  };
 
   if (loading) {
     return <PageLoadingSpinner text="Loading admin dashboard..." />;
@@ -58,8 +86,12 @@ export default function AdminDashboard() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">0</div>
-              <p className="text-xs text-muted-foreground">Registered users</p>
+              <div className="text-2xl font-bold text-blue-600">
+                {statsLoading ? '...' : stats?.users.total || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {stats?.users.newThisMonth || 0} new this month
+              </p>
             </CardContent>
           </Card>
 
@@ -71,9 +103,11 @@ export default function AdminDashboard() {
               <Shield className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">0</div>
+              <div className="text-2xl font-bold text-green-600">
+                {statsLoading ? '...' : stats?.therapists.verified || 0}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Verified therapists
+                {stats?.therapists.pending || 0} pending verification
               </p>
             </CardContent>
           </Card>
@@ -86,9 +120,11 @@ export default function AdminDashboard() {
               <Calendar className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">0</div>
+              <div className="text-2xl font-bold text-orange-600">
+                {statsLoading ? '...' : stats?.appointments.todayCount || 0}
+              </div>
               <p className="text-xs text-muted-foreground">
-                Scheduled appointments
+                {stats?.appointments.upcoming || 0} upcoming total
               </p>
             </CardContent>
           </Card>
@@ -101,8 +137,12 @@ export default function AdminDashboard() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-600">$0</div>
-              <p className="text-xs text-muted-foreground">This month</p>
+              <div className="text-2xl font-bold text-purple-600">
+                {statsLoading ? '...' : `$${stats?.revenue.thisMonth.toFixed(2) || '0.00'}`}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                ${stats?.revenue.total.toFixed(2) || '0.00'} total
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -166,10 +206,28 @@ export default function AdminDashboard() {
                     View All Sessions
                   </Button>
                 </Link>
-                <Link href="/admin/reports" className="block">
+                <Link href="/admin/payments" className="block">
                   <Button variant="outline" className="w-full justify-start">
-                    <TrendingUp className="mr-2 h-4 w-4" />
-                    Analytics & Reports
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Payments & Transactions
+                  </Button>
+                </Link>
+                <Link href="/admin/payouts" className="block">
+                  <Button variant="outline" className="w-full justify-start">
+                    <DollarSign className="mr-2 h-4 w-4" />
+                    Therapist Payouts
+                  </Button>
+                </Link>
+                <Link href="/admin/refunds" className="block">
+                  <Button variant="outline" className="w-full justify-start">
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Refund Requests
+                  </Button>
+                </Link>
+                <Link href="/admin/reviews" className="block">
+                  <Button variant="outline" className="w-full justify-start">
+                    <MessageSquare className="mr-2 h-4 w-4" />
+                    Reviews & Ratings
                   </Button>
                 </Link>
               </CardContent>
