@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Providers } from "@/lib/providers";
+import { LayoutWrapper } from "@/components/layout/LayoutWrapper";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,9 +15,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TherapyConnect - Online Therapy Platform",
+  title: "MindGood - Multilingual Mental Health Support",
   description:
-    "Connect with licensed therapists through secure online sessions",
+    "Connect with psychologists who speak your language. Professional mental health support in Malayalam, Tamil, Hindi, Telugu, and Kannada.",
+  keywords:
+    "mental health, psychologist, counseling, therapy, Malayalam, Tamil, Hindi, Telugu, Kannada, job stress, career building, family orientation, learning disabilities, dyslexia",
+  icons: {
+    icon: "/mindgood.ico",
+    apple: "/Mindgood.png",
+  },
 };
 
 export default function RootLayout({
@@ -26,10 +33,16 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="icon" href="/mindgood.ico" />
+        <link rel="icon" href="/Logo.svg" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Providers>{children}</Providers>
+        <Providers>
+          <LayoutWrapper>{children}</LayoutWrapper>
+        </Providers>
       </body>
     </html>
   );

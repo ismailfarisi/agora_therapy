@@ -74,7 +74,8 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      await signInWithEmail(formData.email, formData.password);
+      let user = await signInWithEmail(formData.email, formData.password);
+      console.log(user);
       router.push(redirectTo);
     } catch (error: unknown) {
       console.error("Login error:", error);

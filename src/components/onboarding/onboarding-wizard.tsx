@@ -138,7 +138,7 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
     {
       id: "complete",
       title: "All Set!",
-      description: "Welcome to TherapyConnect",
+      description: "Welcome to Mindgood",
       icon: CheckCircle,
       required: false,
     },
@@ -322,7 +322,7 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
             <div>
               <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
               <h3 className="text-xl font-semibold mb-2">
-                Welcome to TherapyConnect!
+                Welcome to Mindgood!
               </h3>
               <p className="text-gray-600">
                 Your account is ready. You can now start exploring the platform.
@@ -371,7 +371,7 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome to TherapyConnect
+            Welcome to Mindgood
           </h1>
           <p className="text-gray-600">
             Let&apos;s set up your account in a few simple steps

@@ -27,6 +27,7 @@ import {
   Users,
   Shield,
 } from "lucide-react";
+import Image from "next/image";
 
 export function Navigation() {
   const { user, userData, signOut, loading } = useAuth();
@@ -90,13 +91,15 @@ export function Navigation() {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <div className="flex-shrink-0">
-              <div className="h-8 w-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">TC</span>
-              </div>
+              <Image
+                src="/Mindgood.png"
+                alt="Mindgood"
+                width={120}
+                height={32}
+                className="h-8 w-auto"
+                priority
+              />
             </div>
-            <span className="font-bold text-xl text-gray-900 hidden sm:block">
-              TherapyConnect
-            </span>
           </Link>
 
           {/* Desktop Navigation */}

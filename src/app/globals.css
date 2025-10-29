@@ -43,6 +43,13 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* Website-specific container utility */
+@layer utilities {
+  .container {
+    @apply mx-auto px-4 sm:px-6 lg:px-8;
+  }
+}
+
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
