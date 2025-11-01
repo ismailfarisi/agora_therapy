@@ -1,12 +1,11 @@
 "use client";
-import { TestAgoraToken } from "@/components/TestAgoraToken";
-import { TestBooking } from "@/components/TestBooking";
+
 /**
  * Therapist Dashboard
  * Main dashboard for therapists to manage clients and appointments
  */
 
-import { Navigation } from "@/components/navigation";
+import { TherapistLayout } from "@/components/therapist/TherapistLayout";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -60,12 +59,9 @@ export default function TherapistDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
+    <TherapistLayout>
+      {/* Welcome Section */}
+      <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">
             Welcome back, Dr.{" "}
             {userData?.profile?.lastName ||
@@ -230,11 +226,6 @@ export default function TherapistDashboard() {
             </Card>
           </div>
         </div>
-      </div>
-    </div>
+    </TherapistLayout>
   );
 }
-
-<TestAgoraToken />;
-
-<TestAgoraToken />;

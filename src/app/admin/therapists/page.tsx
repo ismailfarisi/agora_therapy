@@ -5,7 +5,6 @@
 
 "use client";
 
-import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -74,13 +73,11 @@ export default function TherapistsManagement() {
   const fetchTherapists = async () => {
     try {
       setDataLoading(true);
-      // In a real app, this would be an API call
-      // const response = await fetch('/api/admin/therapists');
-      // const data = await response.json();
-      // setTherapists(data);
-      
-      // For now, using empty array
-      setTherapists([]);
+      const response = await fetch('/api/admin/therapists');
+      if (response.ok) {
+        const data = await response.json();
+        setTherapists(data.therapists || []);
+      }
     } catch (error) {
       console.error("Error fetching therapists:", error);
     } finally {
@@ -120,10 +117,12 @@ export default function TherapistsManagement() {
 
   const handleVerify = async (therapistId: string) => {
     try {
-      // API call to verify therapist
-      // await fetch(`/api/admin/therapists/${therapistId}/verify`, { method: 'POST' });
-      console.log("Verifying therapist:", therapistId);
-      fetchTherapists();
+      const response = await fetch(`/api/admin/therapists/${therapistId}/verify`, { 
+        method: 'POST' 
+      });
+      if (response.ok) {
+        fetchTherapists();
+      }
     } catch (error) {
       console.error("Error verifying therapist:", error);
     }
@@ -131,10 +130,12 @@ export default function TherapistsManagement() {
 
   const handleReject = async (therapistId: string) => {
     try {
-      // API call to reject therapist
-      // await fetch(`/api/admin/therapists/${therapistId}/reject`, { method: 'POST' });
-      console.log("Rejecting therapist:", therapistId);
-      fetchTherapists();
+      const response = await fetch(`/api/admin/therapists/${therapistId}/reject`, { 
+        method: 'POST' 
+      });
+      if (response.ok) {
+        fetchTherapists();
+      }
     } catch (error) {
       console.error("Error rejecting therapist:", error);
     }
@@ -150,8 +151,6 @@ export default function TherapistsManagement() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation />
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">

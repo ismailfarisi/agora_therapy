@@ -88,6 +88,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
       await db.collection("appointments").doc(appointmentId).update({
         paymentStatus: "paid",
         status: "confirmed",
+        payoutCreated: false, // Flag to track if payout has been created
         updatedAt: FieldValue.serverTimestamp(),
       });
     }
