@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -80,24 +81,15 @@ export function TherapistSidebar() {
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-center h-16 border-b border-gray-200">
+          <div className="flex items-center justify-start pl-4 h-16 border-b border-gray-200">
             <Link href="/therapist" className="flex items-center">
-              <div className="flex items-center">
-                <svg
-                  className="h-8 w-8 text-teal-600"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                </svg>
-                <span className="ml-2 text-xl font-bold text-gray-900">
-                  MindGood
-                </span>
-              </div>
+              <Image
+                src="/Mindgood.png"
+                alt="MindGood"
+                width={140}
+                height={40}
+                className="object-contain"
+              />
             </Link>
           </div>
 

@@ -1,22 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { cn } from "@/lib/utils";
 import {
   LayoutDashboard,
   Users,
-  Shield,
   Calendar,
-  CreditCard,
   DollarSign,
-  RefreshCw,
   MessageSquare,
   Settings,
+  UserCheck,
+  CreditCard,
+  RefreshCw,
   LogOut,
+  Shield,
 } from "lucide-react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 const menuItems = [
   {
@@ -80,11 +82,14 @@ export function AdminSidebar() {
     <div className="flex h-screen w-64 flex-col bg-white border-r border-gray-200">
       {/* Logo */}
       <div className="flex h-16 items-center border-b border-gray-200 px-6">
-        <Link href="/admin" className="flex items-center space-x-2">
-          <div className="flex items-center justify-center w-8 h-8 bg-teal-500 rounded-lg">
-            <span className="text-white font-bold text-lg">M</span>
-          </div>
-          <span className="text-xl font-bold text-gray-900">MindGood</span>
+        <Link href="/admin" className="flex items-center">
+          <Image
+            src="/Mindgood.png"
+            alt="MindGood"
+            width={140}
+            height={40}
+            className="object-contain"
+          />
         </Link>
       </div>
 
