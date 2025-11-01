@@ -5,8 +5,6 @@
 
 "use client";
 
-import { Navigation } from "@/components/navigation";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -15,7 +13,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { PageLoadingSpinner } from "@/components/ui/loading-spinner";
 import {
   Users,
   Calendar,
@@ -23,16 +20,12 @@ import {
   TrendingUp,
   DollarSign,
   AlertTriangle,
-  CreditCard,
-  MessageSquare,
-  RefreshCw,
 } from "lucide-react";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PlatformStats } from "@/types/database";
 
 export default function AdminDashboard() {
-  const { user, userData, loading } = useAuth();
+  const { user, userData } = useAuth();
   const [stats, setStats] = useState<PlatformStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
 
@@ -57,19 +50,8 @@ export default function AdminDashboard() {
     }
   };
 
-  if (loading) {
-    return <PageLoadingSpinner text="Loading admin dashboard..." />;
-  }
-
-  if (!user || !userData || userData.role !== "admin") {
-    return null; // This will be handled by middleware
-  }
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="p-8">
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
@@ -152,17 +134,10 @@ export default function AdminDashboard() {
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Recent Platform Activity</CardTitle>
-                    <CardDescription>
-                      Latest user registrations and system events
-                    </CardDescription>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    View All Logs
-                  </Button>
-                </div>
+                <CardTitle>Recent Platform Activity</CardTitle>
+                <CardDescription>
+                  Latest user registrations and system events
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-12">
@@ -178,61 +153,8 @@ export default function AdminDashboard() {
             </Card>
           </div>
 
-          {/* Admin Tools */}
+          {/* System Status & Alerts */}
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Admin Tools</CardTitle>
-                <CardDescription>
-                  Platform management and utilities
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Link href="/admin/users" className="block">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Users className="mr-2 h-4 w-4" />
-                    Manage Users
-                  </Button>
-                </Link>
-                <Link href="/admin/therapists" className="block">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Shield className="mr-2 h-4 w-4" />
-                    Verify Therapists
-                  </Button>
-                </Link>
-                <Link href="/admin/appointments" className="block">
-                  <Button variant="outline" className="w-full justify-start">
-                    <Calendar className="mr-2 h-4 w-4" />
-                    View All Sessions
-                  </Button>
-                </Link>
-                <Link href="/admin/payments" className="block">
-                  <Button variant="outline" className="w-full justify-start">
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    Payments & Transactions
-                  </Button>
-                </Link>
-                <Link href="/admin/payouts" className="block">
-                  <Button variant="outline" className="w-full justify-start">
-                    <DollarSign className="mr-2 h-4 w-4" />
-                    Therapist Payouts
-                  </Button>
-                </Link>
-                <Link href="/admin/refunds" className="block">
-                  <Button variant="outline" className="w-full justify-start">
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Refund Requests
-                  </Button>
-                </Link>
-                <Link href="/admin/reviews" className="block">
-                  <Button variant="outline" className="w-full justify-start">
-                    <MessageSquare className="mr-2 h-4 w-4" />
-                    Reviews & Ratings
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-
             <Card>
               <CardHeader>
                 <CardTitle>System Status</CardTitle>
@@ -285,6 +207,5 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

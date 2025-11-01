@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -41,10 +41,11 @@ export default function LoginPage() {
   const redirectTo = searchParams.get("redirect") || "/";
 
   // Redirect if already authenticated
-  if (user && !authLoading) {
-    router.push(redirectTo);
-    return null;
-  }
+  useEffect(() => {
+    if (user && !authLoading) {
+      router.push(redirectTo === "/" ? "/dashboard" : redirectTo);
+    }
+  }, [user, authLoading, router, redirectTo]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -74,9 +75,11 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      let user = await signInWithEmail(formData.email, formData.password);
-      console.log(user);
-      router.push(redirectTo);
+      await signInWithEmail(formData.email, formData.password);
+      // Wait a moment for userData to be fetched
+      setTimeout(() => {
+        window.location.href = redirectTo === "/" ? "/dashboard" : redirectTo;
+      }, 500);
     } catch (error: unknown) {
       console.error("Login error:", error);
       if (error instanceof Error) {
@@ -92,7 +95,6 @@ export default function LoginPage() {
       } else {
         setGeneralError("An unexpected error occurred");
       }
-    } finally {
       setLoading(false);
     }
   };
@@ -103,7 +105,10 @@ export default function LoginPage() {
 
     try {
       await signInWithGoogle();
-      router.push(redirectTo);
+      // Wait a moment for userData to be fetched
+      setTimeout(() => {
+        window.location.href = redirectTo === "/" ? "/dashboard" : redirectTo;
+      }, 500);
     } catch (error: unknown) {
       console.error("Google sign in error:", error);
       if (error instanceof Error) {
@@ -115,7 +120,6 @@ export default function LoginPage() {
       } else {
         setGeneralError("An unexpected error occurred");
       }
-    } finally {
       setLoading(false);
     }
   };

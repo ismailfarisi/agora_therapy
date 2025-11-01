@@ -8,16 +8,31 @@
 
 const admin = require('firebase-admin');
 const { Timestamp } = require('firebase-admin/firestore');
+const path = require('path');
+const fs = require('fs');
 
 // Initialize Firebase Admin
 if (admin.apps.length === 0) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
+  // Try to load from google_services.json first
+  const serviceAccountPath = path.join(__dirname, '..', 'google_services.json');
+  
+  if (fs.existsSync(serviceAccountPath)) {
+    const serviceAccount = require(serviceAccountPath);
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+    console.log('✅ Initialized Firebase Admin with google_services.json');
+  } else {
+    // Fall back to environment variables
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+      }),
+    });
+    console.log('✅ Initialized Firebase Admin with environment variables');
+  }
 }
 
 const auth = admin.auth();
