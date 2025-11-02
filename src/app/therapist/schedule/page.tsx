@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useToast } from "@/lib/hooks/useToast";
+import { TherapistLayout } from "@/components/therapist/TherapistLayout";
 
 // Import our schedule components
 import { AvailabilityCalendar } from "@/components/schedule/AvailabilityCalendar";
@@ -301,29 +302,29 @@ export default function TherapistSchedulePage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6">
+      <TherapistLayout>
         <div className="flex items-center justify-center h-64">
           <RefreshCw className="h-8 w-8 animate-spin text-gray-400" />
         </div>
-      </div>
+      </TherapistLayout>
     );
   }
 
   if (showRecurringSetup) {
     return (
-      <div className="container mx-auto p-6">
+      <TherapistLayout>
         <RecurringScheduleSetup
           timeSlots={timeSlots}
           existingAvailability={availability}
           onComplete={handleRecurringScheduleComplete}
           onCancel={() => setShowRecurringSetup(false)}
         />
-      </div>
+      </TherapistLayout>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <TherapistLayout>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -503,6 +504,6 @@ export default function TherapistSchedulePage() {
           />
         </TabsContent>
       </Tabs>
-    </div>
+    </TherapistLayout>
   );
 }
