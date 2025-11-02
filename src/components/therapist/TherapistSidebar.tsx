@@ -13,6 +13,7 @@ import {
   LogOut,
   Menu,
   X,
+  CalendarCheck,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
@@ -32,6 +33,11 @@ const menuItems = [
     name: "My Schedule",
     href: "/therapist/schedule",
     icon: Calendar,
+  },
+  {
+    name: "My Availability",
+    href: "/therapist/availability",
+    icon: CalendarCheck,
   },
   {
     name: "My Clients",

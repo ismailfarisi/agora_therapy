@@ -33,6 +33,7 @@ import {
 } from "@/components/schedule/RecurringScheduleSetup";
 import { ScheduleOverrides } from "@/components/schedule/ScheduleOverrides";
 import { AvailabilityStats } from "@/components/schedule/AvailabilityStats";
+import { ImprovedTimeSlotManager } from "@/components/schedule/ImprovedTimeSlotManager";
 
 // Import services
 import { TimeSlotService } from "@/lib/services/timeslot-service";
@@ -313,10 +314,10 @@ export default function TherapistSchedulePage() {
   if (showRecurringSetup) {
     return (
       <TherapistLayout>
-        <RecurringScheduleSetup
+        <ImprovedTimeSlotManager
           timeSlots={timeSlots}
           existingAvailability={availability}
-          onComplete={handleRecurringScheduleComplete}
+          onSave={handleRecurringScheduleComplete}
           onCancel={() => setShowRecurringSetup(false)}
         />
       </TherapistLayout>
