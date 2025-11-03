@@ -1,12 +1,14 @@
 /**
- * Client Dashboard
- * Main dashboard for clients to manage appointments and view therapists
+ * Client Profile View
+ * Profile-focused dashboard for clients
  */
 
 "use client";
 
-import { Navigation } from "@/components/navigation";
+import { useEffect, useState } from "react";
+import { ClientLayout } from "@/components/client/ClientLayout";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -19,83 +21,168 @@ import {
   LoadingSpinner,
   PageLoadingSpinner,
 } from "@/components/ui/loading-spinner";
-import { Calendar, Clock, User, MessageCircle, Plus } from "lucide-react";
+import { 
+  Calendar, 
+  Clock, 
+  User, 
+  Mail, 
+  Phone, 
+  MapPin,
+  Edit,
+  CheckCircle,
+  Video,
+  FileText
+} from "lucide-react";
 import Link from "next/link";
+import { AppointmentService } from "@/lib/services/appointment-service";
+import { Appointment } from "@/types/database";
 
 export default function ClientDashboard() {
   const { user, userData, loading } = useAuth();
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loadingAppointments, setLoadingAppointments] = useState(true);
+
+  useEffect(() => {
+    if (user?.uid) {
+      loadAppointments();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid]);
+
+  const loadAppointments = async () => {
+    try {
+      setLoadingAppointments(true);
+      const data = await AppointmentService.getClientAppointments(user!.uid);
+      setAppointments(data);
+    } catch (error) {
+      console.error("Error loading appointments:", error);
+    } finally {
+      setLoadingAppointments(false);
+    }
+  };
+
+  const upcomingAppointments = appointments.filter(
+    (apt) => {
+      const timestamp = apt.scheduledFor as any;
+      const appointmentDate = timestamp?.toDate?.() || new Date(timestamp);
+      return appointmentDate > new Date() && apt.status !== "cancelled";
+    }
+  );
+
+  const completedSessions = appointments.filter(
+    (apt) => apt.status === "completed"
+  ).length;
 
   if (loading) {
-    return <PageLoadingSpinner text="Loading your dashboard..." />;
+    return <PageLoadingSpinner text="Loading your profile..." />;
   }
 
   if (!user || !userData) {
-    return null; // This will be handled by middleware
+    return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-
+    <ClientLayout>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
+        {/* Profile Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">
-            Welcome back, {userData.profile?.firstName || "Client"}
-          </h1>
-          <p className="text-gray-600">
-            Manage your therapy sessions and track your progress.
-          </p>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
+                {/* Avatar */}
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white font-bold text-4xl">
+                    {userData.profile?.firstName?.[0] || "C"}
+                    {userData.profile?.lastName?.[0] || ""}
+                  </span>
+                </div>
+
+                {/* Profile Info */}
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h1 className="text-3xl font-bold text-gray-900">
+                      {userData.profile?.firstName} {userData.profile?.lastName}
+                    </h1>
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                      Client
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+                    <div className="flex items-center gap-2 text-gray-600">
+                      <Mail className="h-4 w-4" />
+                      <span className="text-sm">{user.email}</span>
+                    </div>
+                    {userData.profile?.phoneNumber && (
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Phone className="h-4 w-4" />
+                        <span className="text-sm">{userData.profile.phoneNumber}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Edit Button */}
+                <Link href="/client/settings">
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <Edit className="h-4 w-4" />
+                    Edit Profile
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Quick Actions */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer">
-            <Link href="/client/therapists">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Find Therapist
-                </CardTitle>
-                <User className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-blue-600">Browse</div>
-                <p className="text-xs text-muted-foreground">
-                  Discover qualified therapists
-                </p>
-              </CardContent>
-            </Link>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Sessions</p>
+                  <p className="text-3xl font-bold text-gray-900">{appointments.length}</p>
+                </div>
+                <Video className="h-10 w-10 text-blue-500" />
+              </div>
+            </CardContent>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow cursor-pointer">
-            <Link href="/client/appointments">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  My Sessions
-                </CardTitle>
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-green-600">0</div>
-                <p className="text-xs text-muted-foreground">
-                  Upcoming appointments
-                </p>
-              </CardContent>
-            </Link>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Completed</p>
+                  <p className="text-3xl font-bold text-gray-900">{completedSessions}</p>
+                </div>
+                <CheckCircle className="h-10 w-10 text-green-500" />
+              </div>
+            </CardContent>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Next Session
-              </CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-orange-600">--</div>
-              <p className="text-xs text-muted-foreground">
-                No upcoming sessions
-              </p>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Upcoming</p>
+                  <p className="text-3xl font-bold text-gray-900">{upcomingAppointments.length}</p>
+                </div>
+                <Calendar className="h-10 w-10 text-orange-500" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Member Since</p>
+                  <p className="text-xl font-bold text-gray-900">
+                    {new Date(userData.createdAt as any).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                  </p>
+                </div>
+                <User className="h-10 w-10 text-purple-500" />
+              </div>
             </CardContent>
           </Card>
 
@@ -195,6 +282,6 @@ export default function ClientDashboard() {
           </div>
         </div>
       </div>
-    </div>
+    </ClientLayout>
   );
 }

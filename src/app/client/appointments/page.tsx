@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { AppointmentService } from "@/lib/services/appointment-service";
-import { Navigation } from "@/components/navigation";
+import { ClientLayout } from "@/components/client/ClientLayout";
 import {
   Card,
   CardContent,
@@ -16,15 +16,18 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, User, Video, AlertCircle } from "lucide-react";
-import { Appointment } from "@/types/database";
+import { Calendar, Clock, User, Video, AlertCircle, Download, FileText } from "lucide-react";
+import { Appointment, AppointmentStatus } from "@/types/database";
+import { Timestamp } from "firebase/firestore";
 import Link from "next/link";
+import { useToast } from "@/lib/hooks/useToast";
 
 export default function MySessionsPage() {
   const { user, userData, loading: authLoading } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (user?.uid) {
@@ -46,8 +49,8 @@ export default function MySessionsPage() {
     }
   };
 
-  const formatDate = (timestamp: Timestamp) => {
-    const date = timestamp?.toDate?.() || new Date();
+  const formatDate = (timestamp: any) => {
+    const date = timestamp?.toDate?.() || new Date(timestamp);
     return date.toLocaleDateString("en-US", {
       weekday: "long",
       year: "numeric",
@@ -56,8 +59,8 @@ export default function MySessionsPage() {
     });
   };
 
-  const formatTime = (timestamp: Timestamp) => {
-    const date = timestamp?.toDate?.() || new Date();
+  const formatTime = (timestamp: any) => {
+    const date = timestamp?.toDate?.() || new Date(timestamp);
     return date.toLocaleTimeString("en-US", {
       hour: "2-digit",
       minute: "2-digit",
@@ -80,17 +83,23 @@ export default function MySessionsPage() {
   };
 
   const isUpcoming = (appointment: Appointment) => {
-    const appointmentDate =
-      appointment.scheduledFor?.toDate?.() ||
-      new Date(appointment.scheduledFor);
+    const timestamp = appointment.scheduledFor as any;
+    const appointmentDate = timestamp?.toDate?.() || new Date(timestamp);
     return appointmentDate > new Date() && appointment.status !== "cancelled";
   };
 
   const isPast = (appointment: Appointment) => {
-    const appointmentDate =
-      appointment.scheduledFor?.toDate?.() ||
-      new Date(appointment.scheduledFor);
+    const timestamp = appointment.scheduledFor as any;
+    const appointmentDate = timestamp?.toDate?.() || new Date(timestamp);
     return appointmentDate <= new Date() || appointment.status === "completed";
+  };
+
+  const isActiveNow = (appointment: Appointment) => {
+    const timestamp = appointment.scheduledFor as any;
+    const appointmentDate = timestamp?.toDate?.() || new Date(timestamp);
+    const now = new Date();
+    const endTime = new Date(appointmentDate.getTime() + (appointment.duration || 60) * 60 * 1000);
+    return now >= appointmentDate && now <= endTime && appointment.status === "confirmed";
   };
 
   const isCancelled = (appointment: Appointment) => {
@@ -104,10 +113,47 @@ export default function MySessionsPage() {
   const handleJoinSession = (appointment: Appointment) => {
     if (appointment.session?.joinUrl) {
       window.open(appointment.session.joinUrl, "_blank");
+      toast.success("Joining Session", "Opening video session in new tab");
     } else {
-      alert(
+      toast.error(
+        "Link Not Available",
         "Session link is not available yet. Please check back closer to your appointment time."
       );
+    }
+  };
+
+  const handleDownloadInvoice = async (appointment: Appointment) => {
+    try {
+      // TODO: Implement actual invoice generation/download
+      // For now, create a simple text invoice
+      const invoiceData = `
+INVOICE
+========================================
+Appointment ID: ${appointment.id}
+Date: ${formatDate(appointment.scheduledFor)}
+Time: ${formatTime(appointment.scheduledFor)}
+Duration: ${appointment.duration} minutes
+Therapist: ${appointment.therapistId}
+Session Type: ${appointment.session?.type || "Individual Therapy"}
+Amount: $${appointment.payment?.amount || "0.00"}
+Status: ${appointment.payment?.status || "Pending"}
+========================================
+      `;
+      
+      const blob = new Blob([invoiceData], { type: "text/plain" });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `invoice-${appointment.id}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success("Invoice Downloaded", "Your invoice has been downloaded successfully");
+    } catch (error) {
+      console.error("Error downloading invoice:", error);
+      toast.error("Download Failed", "Failed to download invoice. Please try again.");
     }
   };
 
@@ -121,9 +167,10 @@ export default function MySessionsPage() {
         "Cancelled by client"
       );
       await loadAppointments();
+      toast.success("Appointment Cancelled", "Your appointment has been cancelled successfully");
     } catch (err) {
       console.error("Error cancelling appointment:", err);
-      alert("Failed to cancel appointment. Please try again.");
+      toast.error("Cancellation Failed", "Failed to cancel appointment. Please try again.");
     }
   };
 
@@ -176,8 +223,31 @@ export default function MySessionsPage() {
             </div>
           )}
 
-          {isUpcoming(appointment) && (
-            <div className="flex gap-2 mt-4">
+          <div className="flex flex-wrap gap-2 mt-4">
+            {/* Download Invoice Button - Show for all appointments */}
+            <Button
+              variant="outline"
+              onClick={() => handleDownloadInvoice(appointment)}
+              className="flex items-center gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Download Invoice
+            </Button>
+
+            {/* Join Now - Only for active sessions */}
+            {isActiveNow(appointment) && (
+              <Button
+                onClick={() => handleJoinSession(appointment)}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 animate-pulse"
+                disabled={!appointment.session?.joinUrl}
+              >
+                <Video className="h-4 w-4" />
+                Join Now
+              </Button>
+            )}
+
+            {/* Join Session - For upcoming but not yet active */}
+            {isUpcoming(appointment) && !isActiveNow(appointment) && (
               <Button
                 onClick={() => handleJoinSession(appointment)}
                 className="flex items-center gap-2"
@@ -186,20 +256,26 @@ export default function MySessionsPage() {
                 <Video className="h-4 w-4" />
                 Join Session
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => handleRescheduleAppointment(appointment.id)}
-              >
-                Reschedule
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => handleCancelAppointment(appointment.id)}
-              >
-                Cancel
-              </Button>
-            </div>
-          )}
+            )}
+
+            {/* Reschedule and Cancel - Only for upcoming */}
+            {isUpcoming(appointment) && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => handleRescheduleAppointment(appointment.id)}
+                >
+                  Reschedule
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => handleCancelAppointment(appointment.id)}
+                >
+                  Cancel
+                </Button>
+              </>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
@@ -207,21 +283,16 @@ export default function MySessionsPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navigation />
-        <main className="max-w-6xl mx-auto py-8 px-4">
-          <div className="flex justify-center items-center h-64">
-            <LoadingSpinner size="lg" />
-          </div>
-        </main>
-      </div>
+      <ClientLayout>
+        <div className="flex justify-center items-center h-64">
+          <LoadingSpinner size="lg" />
+        </div>
+      </ClientLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      <main className="max-w-6xl mx-auto py-8 px-4">
+    <ClientLayout>
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">My Sessions</h1>
           <p className="text-lg text-gray-600">
@@ -321,7 +392,6 @@ export default function MySessionsPage() {
             )}
           </TabsContent>
         </Tabs>
-      </main>
-    </div>
+    </ClientLayout>
   );
 }
