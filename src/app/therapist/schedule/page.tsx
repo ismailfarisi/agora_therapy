@@ -97,12 +97,11 @@ export default function TherapistSchedulePage() {
       setOverrides(overridesData);
     } catch (error) {
       console.error("Error loading schedule data:", error);
-      toast({
-        title: "Error",
-        description:
+      toast.error(
+     
           "Failed to load schedule data. Please refresh and try again.",
-        variant: "destructive",
-      });
+    
+      );
     } finally {
       setLoading(false);
     }
@@ -154,17 +153,10 @@ export default function TherapistSchedulePage() {
         ...(addedAvailability.filter(Boolean) as TherapistAvailability[]),
       ]);
 
-      toast({
-        title: "Success",
-        description: "Availability updated successfully",
-      });
+      toast.success("Availability updated successfully",);
     } catch (error) {
       console.error("Error updating availability:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update availability. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to update availability. Please try again.",);
     }
   };
 
@@ -189,17 +181,10 @@ export default function TherapistSchedulePage() {
       setAvailability(newAvailability);
 
       setShowRecurringSetup(false);
-      toast({
-        title: "Success",
-        description: "Weekly schedule applied successfully",
-      });
+      toast.success ("Weekly schedule applied successfully",);
     } catch (error) {
       console.error("Error applying recurring schedule:", error);
-      toast({
-        title: "Error",
-        description: "Failed to apply schedule. Please try again.",
-        variant: "destructive",
-      });
+      toast.error( "Failed to apply schedule. Please try again.",);
     } finally {
       setLoading(false);
     }
@@ -228,17 +213,10 @@ export default function TherapistSchedulePage() {
       );
       setOverrides(newOverrides);
 
-      toast({
-        title: "Success",
-        description: "Schedule override created successfully",
-      });
+      toast.success("Schedule override created successfully",);
     } catch (error) {
       console.error("Error creating override:", error);
-      toast({
-        title: "Error",
-        description: "Failed to create override. Please try again.",
-        variant: "destructive",
-      });
+      toast.error( "Failed to create override. Please try again.",);
     }
   };
 
@@ -266,17 +244,11 @@ export default function TherapistSchedulePage() {
         )
       );
 
-      toast({
-        title: "Success",
-        description: "Schedule override updated successfully",
-      });
+      toast.success( "Schedule override updated successfully",);
     } catch (error) {
       console.error("Error updating override:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update override. Please try again.",
-        variant: "destructive",
-      });
+      toast.error( "Failed to update override. Please try again.",
+       );
     }
   };
 
@@ -287,17 +259,10 @@ export default function TherapistSchedulePage() {
       // Remove from local state
       setOverrides((prev) => prev.filter((override) => override.id !== id));
 
-      toast({
-        title: "Success",
-        description: "Schedule override deleted successfully",
-      });
+      toast.success( "Schedule override deleted successfully",);
     } catch (error) {
       console.error("Error deleting override:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete override. Please try again.",
-        variant: "destructive",
-      });
+      toast.error( "Failed to delete override. Please try again.");
     }
   };
 
