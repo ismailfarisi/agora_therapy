@@ -268,6 +268,98 @@ export class TherapistService {
   }
 
   /**
+   * Upload therapist profile photo (stores locally in public folder)
+   */
+  static async uploadProfilePhoto(
+    therapistId: string,
+    file: File
+  ): Promise<string> {
+    try {
+      // Validate file type
+      const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+      if (!validTypes.includes(file.type)) {
+        throw new Error("Invalid file type. Please upload a JPG, PNG, or WebP image.");
+      }
+
+      // Validate file size (max 5MB)
+      const maxSize = 5 * 1024 * 1024;
+      if (file.size > maxSize) {
+        throw new Error("File size too large. Maximum size is 5MB.");
+      }
+
+      // Create FormData to send file to API
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("therapistId", therapistId);
+
+      // Upload to API endpoint
+      const response = await fetch("/api/upload/therapist-photo", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || "Failed to upload photo");
+      }
+
+      const data = await response.json();
+      const photoURL = data.photoURL;
+
+      // Update therapist profile with photo URL
+      const docRef = documents.therapistProfile(therapistId);
+      await updateDoc(docRef, {
+        photoURL: photoURL,
+        "metadata.updatedAt": serverTimestamp(),
+      });
+
+      return photoURL;
+    } catch (error) {
+      console.error("Error uploading profile photo:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete therapist profile photo
+   */
+  static async deleteProfilePhoto(therapistId: string): Promise<void> {
+    try {
+      // Get current profile to find photo URL
+      const profile = await this.getProfile(therapistId);
+      if (!profile?.photoURL) {
+        return;
+      }
+
+      // Delete via API endpoint
+      const response = await fetch("/api/upload/therapist-photo", {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          therapistId,
+          photoURL: profile.photoURL 
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete photo");
+      }
+
+      // Remove photo URL from profile
+      const docRef = documents.therapistProfile(therapistId);
+      await updateDoc(docRef, {
+        photoURL: null,
+        "metadata.updatedAt": serverTimestamp(),
+      });
+    } catch (error) {
+      console.error("Error deleting profile photo:", error);
+      throw new Error("Failed to delete profile photo");
+    }
+  }
+
+  /**
    * Update verification status (admin only)
    */
   static async updateVerificationStatus(

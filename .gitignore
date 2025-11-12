@@ -40,3 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 google_services.json
+
+# uploaded files (keep directory structure)
+/public/uploads/**/*
+!/public/uploads/**/.gitkeep

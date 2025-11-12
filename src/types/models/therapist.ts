@@ -7,6 +7,7 @@ import { Timestamp } from "firebase/firestore";
 
 export interface TherapistProfile {
   id: string; // same as user.id
+  photoURL?: string; // Profile photo URL from Firebase Storage
   credentials: {
     licenseNumber: string;
     licenseState: string;

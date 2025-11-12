@@ -186,62 +186,83 @@ export default function ClientDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Messages</CardTitle>
-              <MessageCircle className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-purple-600">0</div>
-              <p className="text-xs text-muted-foreground">Unread messages</p>
-            </CardContent>
-          </Card>
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          {/* Recent Sessions */}
+          {/* Upcoming Appointments */}
           <div className="lg:col-span-2">
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Recent Sessions</CardTitle>
+                    <CardTitle>Upcoming Appointments</CardTitle>
                     <CardDescription>
-                      Your latest therapy appointments
+                      Your scheduled therapy sessions
                     </CardDescription>
                   </div>
-                  <Button variant="outline" size="sm">
-                    View All
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12">
-                  <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">
-                    No sessions yet
-                  </h3>
-                  <p className="text-gray-600 mb-6">
-                    Book your first therapy session to get started on your
-                    mental health journey.
-                  </p>
-                  <Link href="/client/therapists">
-                    <Button>
-                      <Plus className="mr-2 h-4 w-4" />
-                      Find a Therapist
+                  <Link href="/client/appointments">
+                    <Button variant="outline" size="sm">
+                      View All
                     </Button>
                   </Link>
                 </div>
+              </CardHeader>
+              <CardContent>
+                {loadingAppointments ? (
+                  <div className="text-center py-12">
+                    <LoadingSpinner size="lg" />
+                  </div>
+                ) : upcomingAppointments.length > 0 ? (
+                  <div className="space-y-4">
+                    {upcomingAppointments.slice(0, 3).map((apt) => {
+                      const timestamp = apt.scheduledFor as any;
+                      const date = timestamp?.toDate?.() || new Date(timestamp);
+                      return (
+                        <div key={apt.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                          <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <Video className="h-6 w-6 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                Session with Therapist
+                              </p>
+                              <p className="text-sm text-gray-600">
+                                {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                          </div>
+                          <Link href="/client/appointments">
+                            <Button size="sm">View Details</Button>
+                          </Link>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Calendar className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      No upcoming sessions
+                    </h3>
+                    <p className="text-gray-600 mb-6">
+                      Book your first therapy session to get started
+                    </p>
+                    <Link href="/client/therapists">
+                      <Button>Find a Therapist</Button>
+                    </Link>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
-          {/* Quick Links */}
+          {/* Quick Actions */}
           <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Quick Actions</CardTitle>
-                <CardDescription>Common tasks and shortcuts</CardDescription>
+                <CardDescription>Common tasks</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <Link href="/client/therapists" className="block">
@@ -253,13 +274,13 @@ export default function ClientDashboard() {
                 <Link href="/client/appointments" className="block">
                   <Button variant="outline" className="w-full justify-start">
                     <Calendar className="mr-2 h-4 w-4" />
-                    View My Sessions
+                    My Appointments
                   </Button>
                 </Link>
-                <Link href="/profile" className="block">
+                <Link href="/client/invoices" className="block">
                   <Button variant="outline" className="w-full justify-start">
-                    <User className="mr-2 h-4 w-4" />
-                    Edit Profile
+                    <FileText className="mr-2 h-4 w-4" />
+                    View Invoices
                   </Button>
                 </Link>
               </CardContent>
@@ -267,15 +288,15 @@ export default function ClientDashboard() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Getting Started</CardTitle>
-                <CardDescription>Tips for your first session</CardDescription>
+                <CardTitle>Therapy Tips</CardTitle>
+                <CardDescription>For a better session</CardDescription>
               </CardHeader>
               <CardContent>
                 <ul className="text-sm space-y-2 text-gray-600">
                   <li>• Choose a quiet, private space</li>
                   <li>• Test your camera and microphone</li>
-                  <li>• Prepare topics you&apos;d like to discuss</li>
-                  <li>• Have water nearby to stay hydrated</li>
+                  <li>• Prepare topics to discuss</li>
+                  <li>• Stay hydrated</li>
                 </ul>
               </CardContent>
             </Card>

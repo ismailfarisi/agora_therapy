@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { TherapistLayout } from "@/components/therapist/TherapistLayout";
+import { ProfilePhotoUpload } from "@/components/therapist/ProfilePhotoUpload";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,6 +31,7 @@ interface TherapistProfile {
   phone: string;
   avatar?: string;
   therapistProfile?: {
+    photoURL?: string;
     credentials: {
       licenseNumber: string;
       licenseState: string;
@@ -120,6 +122,18 @@ export default function TherapistSettingsPage() {
       console.error("Error fetching profile:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePhotoUpdated = (photoURL: string | null) => {
+    if (profile?.therapistProfile) {
+      setProfile({
+        ...profile,
+        therapistProfile: {
+          ...profile.therapistProfile,
+          photoURL: photoURL || undefined,
+        },
+      });
     }
   };
 
@@ -254,6 +268,15 @@ export default function TherapistSettingsPage() {
 
         {/* Profile Tab */}
         <TabsContent value="profile" className="space-y-6">
+          {/* Profile Photo Upload */}
+          {user?.uid && (
+            <ProfilePhotoUpload
+              therapistId={user.uid}
+              currentPhotoURL={profile.therapistProfile?.photoURL}
+              onPhotoUpdated={handlePhotoUpdated}
+            />
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>Personal Information</CardTitle>

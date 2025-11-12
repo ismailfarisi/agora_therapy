@@ -17,6 +17,7 @@ import {
   Clock
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { TherapistService } from "@/lib/services/therapist-service";
 import { TherapistProfile } from "@/types/database";
 
@@ -33,7 +34,7 @@ export default function TherapistsPage() {
   const loadTherapists = async () => {
     try {
       setLoading(true);
-      const data = await TherapistService.getAllTherapists();
+      const data = await TherapistService.searchTherapists({});
       setTherapists(data);
     } catch (error) {
       console.error("Error loading therapists:", error);
@@ -55,15 +56,14 @@ export default function TherapistsPage() {
   const filteredTherapists = therapists.filter((therapist) => {
     const matchesSearch =
       searchQuery === "" ||
-      therapist.profile?.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      therapist.profile?.lastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      therapist.specializations?.some((s) =>
+      therapist.practice?.bio?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      therapist.credentials?.specializations?.some((s: string) =>
         s.toLowerCase().includes(searchQuery.toLowerCase())
       );
 
     const matchesSpecialty =
       selectedSpecialty === "all" ||
-      therapist.specializations?.includes(selectedSpecialty);
+      therapist.credentials?.specializations?.includes(selectedSpecialty);
 
     return matchesSearch && matchesSpecialty;
   });
@@ -132,29 +132,33 @@ export default function TherapistsPage() {
       {/* Therapists Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTherapists.map((therapist) => (
-          <Card key={therapist.userId} className="hover:shadow-lg transition-shadow">
+          <Card key={therapist.id} className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
-                    <span className="text-white font-bold text-xl">
-                      {therapist.profile?.firstName?.[0] || "T"}
-                      {therapist.profile?.lastName?.[0] || ""}
-                    </span>
+                  <div className="w-16 h-16 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center overflow-hidden">
+                    {therapist.photoURL ? (
+                      <Image
+                        src={therapist.photoURL}
+                        alt="Therapist"
+                        width={64}
+                        height={64}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-white font-bold text-xl">
+                        T
+                      </span>
+                    )}
                   </div>
                   <div>
                     <CardTitle className="text-lg">
-                      Dr. {therapist.profile?.firstName}{" "}
-                      {therapist.profile?.lastName}
+                      Dr. Therapist
                     </CardTitle>
                     <div className="flex items-center gap-1 mt-1">
                       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm font-medium">
-                        {therapist.rating?.average?.toFixed(1) || "5.0"}
-                      </span>
-                      <span className="text-sm text-gray-500">
-                        ({therapist.rating?.count || 0})
-                      </span>
+                      <span className="text-sm font-medium">5.0</span>
+                      <span className="text-sm text-gray-500">(0)</span>
                     </div>
                   </div>
                 </div>
@@ -168,14 +172,14 @@ export default function TherapistsPage() {
                     Specializations
                   </p>
                   <div className="flex flex-wrap gap-1">
-                    {therapist.specializations?.slice(0, 3).map((spec) => (
+                    {therapist.credentials?.specializations?.slice(0, 3).map((spec: string) => (
                       <Badge key={spec} variant="secondary" className="text-xs">
                         {spec}
                       </Badge>
                     ))}
-                    {(therapist.specializations?.length || 0) > 3 && (
+                    {(therapist.credentials?.specializations?.length || 0) > 3 && (
                       <Badge variant="secondary" className="text-xs">
-                        +{(therapist.specializations?.length || 0) - 3} more
+                        +{(therapist.credentials?.specializations?.length || 0) - 3} more
                       </Badge>
                     )}
                   </div>
@@ -184,14 +188,14 @@ export default function TherapistsPage() {
                 {/* Experience */}
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <Clock className="h-4 w-4" />
-                  <span>{therapist.yearsOfExperience || 5}+ years experience</span>
+                  <span>{therapist.practice?.yearsExperience || 5}+ years experience</span>
                 </div>
 
-                {/* Location */}
-                {therapist.profile?.location && (
+                {/* Languages */}
+                {therapist.practice?.languages && therapist.practice.languages.length > 0 && (
                   <div className="flex items-center gap-2 text-sm text-gray-600">
                     <MapPin className="h-4 w-4" />
-                    <span>{therapist.profile.location}</span>
+                    <span>{therapist.practice.languages.join(", ")}</span>
                   </div>
                 )}
 
@@ -199,26 +203,26 @@ export default function TherapistsPage() {
                 <div className="flex items-center gap-2 text-sm text-gray-600">
                   <DollarSign className="h-4 w-4" />
                   <span>
-                    ${therapist.pricing?.sessionRate || 100}/session
+                    ${therapist.practice?.hourlyRate || 100}/session
                   </span>
                 </div>
 
                 {/* Bio Preview */}
-                {therapist.bio && (
+                {therapist.practice?.bio && (
                   <p className="text-sm text-gray-600 line-clamp-2">
-                    {therapist.bio}
+                    {therapist.practice.bio}
                   </p>
                 )}
 
                 {/* Actions */}
                 <div className="flex gap-2 pt-2">
                   <Button asChild className="flex-1">
-                    <Link href={`/client/therapists/${therapist.userId}`}>
+                    <Link href={`/client/therapists/${therapist.id}`}>
                       View Profile
                     </Link>
                   </Button>
                   <Button asChild variant="outline" className="flex-1">
-                    <Link href={`/client/book/${therapist.userId}`}>
+                    <Link href={`/client/book/${therapist.id}`}>
                       <Calendar className="h-4 w-4 mr-2" />
                       Book
                     </Link>
