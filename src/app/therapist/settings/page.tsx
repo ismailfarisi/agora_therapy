@@ -122,12 +122,16 @@ export default function TherapistSettingsPage() {
       const lastName = profile.profile?.lastName || "";
       const fullName = displayName || `${firstName} ${lastName}`.trim();
       
+      // Normalize hourly rate (handle both old dollar format and new cents format)
+      const rawRate = profile.therapistProfile?.practice?.hourlyRate || 0;
+      const normalizedRate = rawRate < 1000 ? rawRate * 100 : rawRate;
+      
       setFormData({
         name: fullName,
         phone: profile.profile?.phoneNumber || "",
         bio: profile.therapistProfile?.practice?.bio || "",
         yearsExperience: profile.therapistProfile?.practice?.yearsExperience || 0,
-        hourlyRate: profile.therapistProfile?.practice?.hourlyRate || 0,
+        hourlyRate: normalizedRate,
         timezone: profile.therapistProfile?.availability?.timezone || "",
         bufferMinutes: profile.therapistProfile?.availability?.bufferMinutes || 15,
         maxDailyHours: profile.therapistProfile?.availability?.maxDailyHours || 8,

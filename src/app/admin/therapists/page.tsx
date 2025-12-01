@@ -25,37 +25,12 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-
-interface Therapist {
-  id: string;
-  email: string;
-  profile: {
-    displayName: string;
-    firstName: string;
-    lastName: string;
-  };
-  therapistProfile?: {
-    credentials: {
-      licenseNumber: string;
-      specializations: string[];
-    };
-    practice: {
-      yearsExperience: number;
-      hourlyRate: number;
-      languages: string[];
-    };
-    verification: {
-      isVerified: boolean;
-      verifiedAt?: any;
-    };
-  };
-  status: string;
-}
+import { TherapistAdminView } from "@/types/models/therapist";
 
 export default function TherapistsManagement() {
   const { user, userData, loading } = useAuth();
-  const [therapists, setTherapists] = useState<Therapist[]>([]);
-  const [filteredTherapists, setFilteredTherapists] = useState<Therapist[]>([]);
+  const [therapists, setTherapists] = useState<TherapistAdminView[]>([]);
+  const [filteredTherapists, setFilteredTherapists] = useState<TherapistAdminView[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "verified" | "pending">("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -120,24 +95,42 @@ export default function TherapistsManagement() {
       const response = await fetch(`/api/admin/therapists/${therapistId}/verify`, { 
         method: 'POST' 
       });
+      
+      const data = await response.json();
+      
       if (response.ok) {
+        alert('Therapist verified successfully!');
         fetchTherapists();
+      } else {
+        alert(`Error: ${data.error || 'Failed to verify therapist'}`);
       }
     } catch (error) {
       console.error("Error verifying therapist:", error);
+      alert('An unexpected error occurred. Please try again.');
     }
   };
 
   const handleReject = async (therapistId: string) => {
+    if (!confirm('Are you sure you want to reject this therapist application? This will suspend their account.')) {
+      return;
+    }
+    
     try {
       const response = await fetch(`/api/admin/therapists/${therapistId}/reject`, { 
         method: 'POST' 
       });
+      
+      const data = await response.json();
+      
       if (response.ok) {
+        alert('Therapist application rejected successfully.');
         fetchTherapists();
+      } else {
+        alert(`Error: ${data.error || 'Failed to reject therapist'}`);
       }
     } catch (error) {
       console.error("Error rejecting therapist:", error);
+      alert('An unexpected error occurred. Please try again.');
     }
   };
 

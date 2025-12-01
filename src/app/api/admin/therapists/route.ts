@@ -29,39 +29,99 @@ export async function GET(request: NextRequest) {
       .where("role", "==", "therapist")
       .get();
 
-    const therapists = therapistsSnapshot.docs.map((doc) => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        email: data.email || "",
-        profile: {
-          displayName: data.profile?.displayName || "",
-          firstName: data.profile?.firstName || "",
-          lastName: data.profile?.lastName || "",
-          phoneNumber: data.profile?.phoneNumber || "",
-          avatarUrl: data.profile?.avatarUrl || "",
-        },
-        therapistProfile: data.therapistProfile || {
-          credentials: {
-            licenseNumber: "",
-            specializations: [],
+    // Fetch therapist profiles for all therapists
+    const therapists = await Promise.all(
+      therapistsSnapshot.docs.map(async (doc) => {
+        const data = doc.data();
+        
+        // Fetch therapist profile from therapistProfiles collection
+        const therapistProfileDoc = await db
+          .collection("therapistProfiles")
+          .doc(doc.id)
+          .get();
+        
+        const therapistProfileData = therapistProfileDoc.exists
+          ? therapistProfileDoc.data()
+          : null;
+
+        return {
+          id: doc.id,
+          email: data.email || "",
+          profile: {
+            displayName: data.profile?.displayName || "",
+            firstName: data.profile?.firstName || "",
+            lastName: data.profile?.lastName || "",
+            phoneNumber: data.profile?.phoneNumber || "",
+            avatarUrl: data.profile?.avatarUrl || "",
           },
-          practice: {
-            yearsExperience: 0,
-            hourlyRate: 0,
-            languages: [],
+          therapistProfile: therapistProfileData
+            ? {
+                services: therapistProfileData.services || [],
+                credentials: {
+                  licenseNumber: therapistProfileData.credentials?.licenseNumber || "",
+                  licenseState: therapistProfileData.credentials?.licenseState || "",
+                  licenseExpiry: therapistProfileData.credentials?.licenseExpiry
+                    ?.toDate?.()
+                    ?.toISOString(),
+                  specializations: therapistProfileData.credentials?.specializations || [],
+                  certifications: therapistProfileData.credentials?.certifications || [],
+                },
+                practice: {
+                  bio: therapistProfileData.practice?.bio || "",
+                  yearsExperience: therapistProfileData.practice?.yearsExperience || 0,
+                  sessionTypes: therapistProfileData.practice?.sessionTypes || [],
+                  hourlyRate: therapistProfileData.practice?.hourlyRate || 0,
+                  languages: therapistProfileData.practice?.languages || [],
+                  currency: therapistProfileData.practice?.currency || "USD",
+                },
+                availability: {
+                  timezone: therapistProfileData.availability?.timezone || "UTC",
+                  bufferMinutes: therapistProfileData.availability?.bufferMinutes || 15,
+                  maxDailyHours: therapistProfileData.availability?.maxDailyHours || 8,
+                  advanceBookingDays: therapistProfileData.availability?.advanceBookingDays || 30,
+                },
+                verification: {
+                  isVerified: therapistProfileData.verification?.isVerified || false,
+                  verifiedAt: therapistProfileData.verification?.verifiedAt
+                    ?.toDate?.()
+                    ?.toISOString(),
+                  verifiedBy: therapistProfileData.verification?.verifiedBy,
+                },
+              }
+            : {
+                services: [],
+                credentials: {
+                  licenseNumber: "",
+                  licenseState: "",
+                  specializations: [],
+                  certifications: [],
+                },
+                practice: {
+                  bio: "",
+                  yearsExperience: 0,
+                  sessionTypes: [],
+                  hourlyRate: 0,
+                  languages: [],
+                  currency: "USD",
+                },
+                availability: {
+                  timezone: "UTC",
+                  bufferMinutes: 15,
+                  maxDailyHours: 8,
+                  advanceBookingDays: 30,
+                },
+                verification: {
+                  isVerified: false,
+                },
+              },
+          status: data.status || "active",
+          metadata: {
+            createdAt: data.metadata?.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+            lastLoginAt: data.metadata?.lastLoginAt?.toDate?.()?.toISOString() || new Date().toISOString(),
           },
-          verification: {
-            isVerified: false,
-          },
-        },
-        status: data.status || "active",
-        metadata: {
-          createdAt: data.metadata?.createdAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-          lastLoginAt: data.metadata?.lastLoginAt?.toDate?.()?.toISOString() || new Date().toISOString(),
-        },
-      };
-    });
+        };
+      })
+    );
 
     return NextResponse.json({ therapists });
   } catch (error) {

@@ -31,12 +31,17 @@ import {
   DollarSign,
   Shield,
   Clock,
+  Upload,
+  X,
+  FileText,
 } from "lucide-react";
 import { ProfileService } from "@/lib/services/profile-service";
 import { TherapistService } from "@/lib/services/therapist-service";
 import type { User } from "@/types/database";
 import { Textarea } from "@/components/ui/textarea";
 import { Timestamp } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { storage } from "@/lib/firebase/client";
 import { useOnboardingState, type OnboardingState } from "@/lib/hooks/useOnboardingState";
 import { TIMEZONES, TIMEZONE_GROUPS, getUserTimezone } from "@/lib/constants/timezones";
 import { LANGUAGES, LANGUAGE_GROUPS } from "@/lib/constants/languages";
@@ -139,6 +144,8 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [uploadingCertificate, setUploadingCertificate] = useState(false);
+  const [certificateURLs, setCertificateURLs] = useState<string[]>([]);
   const isTherapist = user.role === "therapist";
   
   const [data, setData] = useState<OnboardingData>({
@@ -176,8 +183,8 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
           bio: "",
           yearsExperience: 0,
           sessionTypes: [],
-          languages: ["en"], // Default to English language code
-          hourlyRate: 100,
+          languages: [], // Will be copied from basicInfo.languages when saving
+          hourlyRate: 10000, // Default $100.00 (stored in cents)
           currency: "USD",
         },
         availability: {
@@ -364,6 +371,67 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
     }));
   };
 
+  const handleCertificateUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    // Check if adding these files would exceed the limit
+    if (certificateURLs.length + files.length > 6) {
+      alert("You can upload a maximum of 6 certificates");
+      return;
+    }
+
+    setUploadingCertificate(true);
+
+    try {
+      const uploadPromises = Array.from(files).map(async (file) => {
+        // Validate file type
+        if (file.type !== "application/pdf") {
+          throw new Error(`${file.name} is not a PDF file`);
+        }
+
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+          throw new Error(`${file.name} exceeds 5MB size limit`);
+        }
+
+        // Upload to Firebase Storage
+        const timestamp = Date.now();
+        const fileName = `${timestamp}_${file.name}`;
+        const storageRef = ref(storage, `certificates/${user.id}/${fileName}`);
+        
+        await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(storageRef);
+        
+        return downloadURL;
+      });
+
+      const newURLs = await Promise.all(uploadPromises);
+      setCertificateURLs((prev) => [...prev, ...newURLs]);
+      
+      // Update the certifications in the data state
+      if (data.therapistProfile) {
+        updateTherapistCredentials("certifications", [...certificateURLs, ...newURLs]);
+      }
+    } catch (error: any) {
+      console.error("Error uploading certificates:", error);
+      alert(error.message || "Failed to upload certificates");
+    } finally {
+      setUploadingCertificate(false);
+      // Reset the input
+      event.target.value = "";
+    }
+  };
+
+  const handleRemoveCertificate = (index: number) => {
+    const newURLs = certificateURLs.filter((_, i) => i !== index);
+    setCertificateURLs(newURLs);
+    
+    if (data.therapistProfile) {
+      updateTherapistCredentials("certifications", newURLs);
+    }
+  };
+
   const handleFinishOnboarding = async () => {
     setLoading(true);
 
@@ -378,6 +446,12 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
           credentials: {
             ...data.therapistProfile.credentials,
             licenseExpiry: Timestamp.fromDate(data.therapistProfile.credentials.licenseExpiry),
+            certifications: certificateURLs, // Use the uploaded certificate URLs
+          },
+          practice: {
+            ...data.therapistProfile.practice,
+            // Use languages from basicInfo since we removed the duplicate field
+            languages: data.basicInfo.languages,
           },
         };
         await TherapistService.saveProfile(user.id, therapistData);
@@ -565,7 +639,7 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
       case "credentials":
         if (!isTherapist || !data.therapistProfile) return null;
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="licenseNumber">License Number *</Label>
@@ -596,6 +670,84 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
                 onChange={(e) => updateTherapistCredentials("licenseExpiry", new Date(e.target.value))}
               />
             </div>
+
+            {/* Certificate Upload Section */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Professional Certificates (Optional)</Label>
+                <span className="text-sm text-gray-500">
+                  {certificateURLs.length}/6 uploaded
+                </span>
+              </div>
+              <p className="text-sm text-gray-600">
+                Upload your professional certificates, licenses, or qualifications (PDF only, max 5MB each)
+              </p>
+
+              {/* Upload Button */}
+              {certificateURLs.length < 6 && (
+                <div>
+                  <input
+                    type="file"
+                    id="certificate-upload"
+                    accept="application/pdf"
+                    multiple
+                    onChange={handleCertificateUpload}
+                    className="hidden"
+                    disabled={uploadingCertificate}
+                  />
+                  <label htmlFor="certificate-upload">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      disabled={uploadingCertificate}
+                      onClick={() => document.getElementById('certificate-upload')?.click()}
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {uploadingCertificate ? "Uploading..." : "Upload Certificates"}
+                    </Button>
+                  </label>
+                </div>
+              )}
+
+              {/* Uploaded Certificates List */}
+              {certificateURLs.length > 0 && (
+                <div className="space-y-2">
+                  {certificateURLs.map((url, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                    >
+                      <div className="flex items-center gap-3 flex-1">
+                        <FileText className="w-5 h-5 text-blue-600" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            Certificate {index + 1}
+                          </p>
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs text-blue-600 hover:underline"
+                          >
+                            View PDF
+                          </a>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveCertificate(index)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         );
 
@@ -614,25 +766,15 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="yearsExperience">Years of Experience *</Label>
-                <Input
-                  id="yearsExperience"
-                  type="number"
-                  min="0"
-                  value={data.therapistProfile.practice.yearsExperience}
-                  onChange={(e) => updateTherapistPractice("yearsExperience", parseInt(e.target.value) || 0)}
-                />
-              </div>
-              <div className="space-y-2">
-                <LanguageMultiSelect
-                  selectedLanguages={data.therapistProfile.practice.languages}
-                  onLanguagesChange={(languages) => updateTherapistPractice("languages", languages)}
-                  label="Languages You Speak"
-                  placeholder="Search and select languages..."
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="yearsExperience">Years of Experience *</Label>
+              <Input
+                id="yearsExperience"
+                type="number"
+                min="0"
+                value={data.therapistProfile.practice.yearsExperience}
+                onChange={(e) => updateTherapistPractice("yearsExperience", parseInt(e.target.value) || 0)}
+              />
             </div>
           </div>
         );
@@ -641,18 +783,62 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
         if (!isTherapist || !data.therapistProfile) return null;
         return (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="hourlyRate">Hourly Rate (USD) *</Label>
-                <Input
-                  id="hourlyRate"
-                  type="number"
-                  min="0"
-                  value={data.therapistProfile.practice.hourlyRate}
-                  onChange={(e) => updateTherapistPractice("hourlyRate", parseInt(e.target.value) || 0)}
-                  placeholder="100"
-                />
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Input
+                    id="hourlyRate"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={data.therapistProfile.practice.hourlyRate / 100}
+                    onChange={(e) =>
+                      updateTherapistPractice(
+                        "hourlyRate",
+                        Math.round(parseFloat(e.target.value) * 100)
+                      )
+                    }
+                    placeholder="100.00"
+                    className="pl-10"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Platform fee (15%) will be deducted from this amount
+                </p>
               </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-900 mb-2">
+                  Rate Breakdown
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-700">Your Rate:</span>
+                    <span className="font-semibold">
+                      ${(data.therapistProfile.practice.hourlyRate / 100).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-700">Platform Fee (15%):</span>
+                    <span className="text-red-600">
+                      -${((data.therapistProfile.practice.hourlyRate * 0.15) / 100).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="border-t border-blue-300 pt-2 flex justify-between">
+                    <span className="font-semibold text-gray-900">
+                      You Receive:
+                    </span>
+                    <span className="font-bold text-green-600">
+                      ${((data.therapistProfile.practice.hourlyRate * 0.85) / 100).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="bufferMinutes">Buffer Between Sessions (minutes)</Label>
                 <Input

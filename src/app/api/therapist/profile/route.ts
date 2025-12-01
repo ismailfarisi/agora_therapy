@@ -77,14 +77,48 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     const db = getAdminFirestore();
 
-    // Update user profile
-    await db
-      .collection("users")
-      .doc(decodedToken.uid)
-      .update({
-        ...body,
-        "metadata.updatedAt": FieldValue.serverTimestamp(),
-      });
+    console.log("📝 Update request body:", JSON.stringify(body, null, 2));
+
+    // Separate fields by collection
+    const userFields: any = {};
+    const therapistProfileFields: any = {};
+
+    Object.keys(body).forEach((key) => {
+      if (key.startsWith("therapistProfile.")) {
+        // Extract the nested path for therapistProfiles collection
+        const fieldPath = key.replace("therapistProfile.", "");
+        therapistProfileFields[fieldPath] = body[key];
+      } else {
+        // Fields for users collection
+        userFields[key] = body[key];
+      }
+    });
+
+    console.log("👤 User fields to update:", userFields);
+    console.log("🩺 Therapist profile fields to update:", therapistProfileFields);
+
+    // Update users collection if there are user fields
+    if (Object.keys(userFields).length > 0) {
+      await db
+        .collection("users")
+        .doc(decodedToken.uid)
+        .update({
+          ...userFields,
+          "metadata.updatedAt": FieldValue.serverTimestamp(),
+        });
+      console.log("✅ Updated users collection");
+    }
+
+    // Update therapistProfiles collection if there are therapist fields
+    if (Object.keys(therapistProfileFields).length > 0) {
+      await db
+        .collection("therapistProfiles")
+        .doc(decodedToken.uid)
+        .update({
+          ...therapistProfileFields,
+        });
+      console.log("✅ Updated therapistProfiles collection");
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {
