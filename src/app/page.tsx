@@ -1,12 +1,55 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FiArrowRight } from "react-icons/fi";
 import { specializations, psychologists } from "@/lib/data/psychologists";
 
-// This component is server-rendered for better SEO
+interface Language {
+  code: string;
+  name: string;
+  nativeName?: string;
+  region: string;
+}
+
 export default function Home() {
+  const [popularLanguages, setPopularLanguages] = useState<Language[]>([]);
+  const [loading, setLoading] = useState(true);
+  
   // Get featured psychologists (first 3)
   const featuredPsychologists = psychologists.slice(0, 3);
+
+  useEffect(() => {
+    fetchLanguages();
+  }, []);
+
+  const fetchLanguages = async () => {
+    try {
+      const response = await fetch('/api/public/languages');
+      if (response.ok) {
+        const data = await response.json();
+        // Get the popular Indian languages
+        const popular = data.languages.filter((lang: Language) => 
+          data.popularIndianLanguages.includes(lang.code)
+        );
+        setPopularLanguages(popular.slice(0, 6)); // Show first 6
+      }
+    } catch (error) {
+      console.error('Error fetching languages:', error);
+      // Fallback to default languages
+      setPopularLanguages([
+        { code: 'ml', name: 'Malayalam', region: 'India' },
+        { code: 'ta', name: 'Tamil', region: 'India' },
+        { code: 'hi', name: 'Hindi', region: 'India' },
+        { code: 'te', name: 'Telugu', region: 'India' },
+        { code: 'kn', name: 'Kannada', region: 'India' },
+        { code: 'en', name: 'English', region: 'India' },
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <>
@@ -64,18 +107,27 @@ export default function Home() {
             </p>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
-            {['Malayalam', 'Tamil', 'Hindi', 'Telugu', 'Kannada', 'English'].map((language) => (
-              <div key={language} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 text-center hover:shadow-md transition-shadow">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-teal-500/20 to-blue-600/20 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-teal-600 dark:text-teal-400">
-                    {language.charAt(0)}
-                  </span>
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
+              {popularLanguages.map((language) => (
+                <div key={language.code} className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 text-center hover:shadow-md transition-shadow">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-r from-teal-500/20 to-blue-600/20 flex items-center justify-center">
+                    <span className="text-2xl font-bold text-teal-600 dark:text-teal-400">
+                      {language.name.charAt(0)}
+                    </span>
+                  </div>
+                  <h3 className="font-medium text-gray-900 dark:text-white">{language.name}</h3>
+                  {language.nativeName && (
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{language.nativeName}</p>
+                  )}
                 </div>
-                <h3 className="font-medium text-gray-900 dark:text-white">{language}</h3>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
