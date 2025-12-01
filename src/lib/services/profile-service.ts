@@ -21,6 +21,7 @@ export interface ProfileUpdateData {
   phoneNumber?: string;
   timezone: string;
   locale: string;
+  languages?: string[]; // Array of language codes
 }
 
 export class ProfileService {
@@ -34,7 +35,7 @@ export class ProfileService {
     try {
       const userRef = documents.user(userId);
 
-      await updateDoc(userRef, {
+      const updateData: any = {
         "profile.firstName": data.firstName,
         "profile.lastName": data.lastName,
         "profile.displayName": data.displayName,
@@ -42,7 +43,14 @@ export class ProfileService {
         "profile.timezone": data.timezone,
         "profile.locale": data.locale,
         "metadata.updatedAt": serverTimestamp(),
-      });
+      };
+
+      // Add languages if provided
+      if (data.languages) {
+        updateData["profile.languages"] = data.languages;
+      }
+
+      await updateDoc(userRef, updateData);
     } catch (error) {
       console.error("Error updating profile:", error);
       throw new Error("Failed to update profile");

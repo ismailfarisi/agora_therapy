@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
     }
 
     const db = getAdminFirestore();
+    
+    // Fetch user data from users collection
     const userDoc = await db.collection("users").doc(decodedToken.uid).get();
 
     if (!userDoc.exists) {
@@ -25,7 +27,29 @@ export async function GET(request: NextRequest) {
     }
 
     const userData = userDoc.data();
-    return NextResponse.json({ profile: userData });
+    
+    // Fetch therapist profile data from therapistProfiles collection
+    const therapistProfileDoc = await db
+      .collection("therapistProfiles")
+      .doc(decodedToken.uid)
+      .get();
+
+    let therapistProfileData = null;
+    if (therapistProfileDoc.exists) {
+      therapistProfileData = therapistProfileDoc.data();
+    }
+
+    // Merge both data sources
+    const mergedProfile = {
+      ...userData,
+      therapistProfile: therapistProfileData,
+    };
+
+    console.log("🔍 API - User Data:", JSON.stringify(userData, null, 2));
+    console.log("🔍 API - Therapist Profile Data:", JSON.stringify(therapistProfileData, null, 2));
+    console.log("🔍 API - Merged Profile:", JSON.stringify(mergedProfile, null, 2));
+    
+    return NextResponse.json({ profile: mergedProfile });
   } catch (error) {
     console.error("Error fetching profile:", error);
     return NextResponse.json(

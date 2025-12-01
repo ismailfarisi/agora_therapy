@@ -31,15 +31,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Refresh user data from Firestore
   const refreshUserData = async () => {
+    console.log("🔄 refreshUserData - Called with user:", user?.uid);
+    
     if (user) {
       try {
+        console.log("🔄 refreshUserData - Fetching user data...");
         const data = await getCurrentUserData();
+        console.log("🔄 refreshUserData - Got data:", data ? "✅ Data received" : "❌ No data");
+        console.log("🔄 refreshUserData - Data details:", JSON.stringify(data, null, 2));
         setUserData(data);
       } catch (error) {
-        console.error("Error refreshing user data:", error);
+        console.error("❌ Error refreshing user data:", error);
         setUserData(null);
       }
     } else {
+      console.log("🔄 refreshUserData - No user, setting userData to null");
       setUserData(null);
     }
   };
@@ -58,22 +64,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Listen to authentication state changes
   useEffect(() => {
+    console.log("👂 useAuth - Setting up auth state listener");
+    
     const unsubscribe = onAuthStateChange(async (authUser) => {
+      console.log("🔐 Auth state changed - User:", authUser?.uid || "null");
       setUser(authUser);
       setLoading(true);
 
       if (authUser) {
+        console.log("✅ User authenticated:", authUser.email);
         // Set auth token cookie for middleware
         try {
           const token = await authUser.getIdToken();
           document.cookie = `auth-token=${token}; path=/; secure; samesite=strict`;
+          console.log("🍪 Auth token cookie set");
 
           // Get user data from Firestore
+          console.log("📥 Fetching user data from Firestore...");
           await refreshUserData();
         } catch (error) {
-          console.error("Error setting auth token:", error);
+          console.error("❌ Error setting auth token:", error);
         }
       } else {
+        console.log("❌ No user authenticated");
         // Clear auth token cookie
         document.cookie =
           "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
@@ -81,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setLoading(false);
+      console.log("✅ Auth state processing complete");
     });
 
     return unsubscribe;

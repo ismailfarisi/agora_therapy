@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ClientLayout } from "@/components/client/ClientLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,11 +16,11 @@ import {
   CreditCard,
   Save,
   Mail,
-  Phone,
-  MapPin
+  Phone
 } from "lucide-react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { useToast } from "@/lib/hooks/useToast";
+import { Badge } from "@/components/ui/badge";
 
 export default function SettingsPage() {
   const { user, userData } = useAuth();
@@ -28,12 +28,31 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
 
   // Profile settings
-  const [firstName, setFirstName] = useState(userData?.profile?.firstName || "");
-  const [lastName, setLastName] = useState(userData?.profile?.lastName || "");
-  const [email, setEmail] = useState(user?.email || "");
-  const [phone, setPhone] = useState(userData?.profile?.phone || "");
-  const [location, setLocation] = useState(userData?.profile?.location || "");
-  const [bio, setBio] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+
+  // Update form fields when userData is loaded
+  useEffect(() => {
+    if (userData) {
+      setFirstName(userData.profile?.firstName || "");
+      setLastName(userData.profile?.lastName || "");
+      setPhone(userData.profile?.phoneNumber || "");
+      console.log("✅ Form fields updated:", {
+        firstName: userData.profile?.firstName,
+        lastName: userData.profile?.lastName,
+        phone: userData.profile?.phoneNumber,
+      });
+    }
+  }, [userData]);
+
+  // Update email when user is loaded
+  useEffect(() => {
+    if (user?.email) {
+      setEmail(user.email);
+    }
+  }, [user]);
 
   // Notification settings
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -161,31 +180,6 @@ export default function SettingsPage() {
                     placeholder="+1 (555) 123-4567"
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                  <Input
-                    id="location"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    className="pl-10"
-                    placeholder="New York, NY"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
-                <Textarea
-                  id="bio"
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  placeholder="Tell us a bit about yourself..."
-                  rows={4}
-                />
               </div>
 
               <Button onClick={handleSaveProfile} disabled={loading}>

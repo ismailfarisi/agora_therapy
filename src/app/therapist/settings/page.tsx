@@ -25,21 +25,47 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-interface TherapistProfile {
-  name: string;
+interface TherapistProfileResponse {
+  id: string;
   email: string;
-  phone: string;
-  avatar?: string;
+  profile: {
+    displayName: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber?: string;
+    avatarUrl?: string;
+    timezone: string;
+    locale: string;
+  };
+  role: string;
+  status: string;
+  preferences: {
+    notifications: {
+      email: boolean;
+      sms: boolean;
+      push: boolean;
+    };
+    privacy: {
+      shareProfile: boolean;
+      allowDirectMessages: boolean;
+    };
+  };
+  metadata: {
+    createdAt: any;
+    updatedAt: any;
+    lastLoginAt: any;
+    onboardingCompleted: boolean;
+  };
   therapistProfile?: {
     photoURL?: string;
-    credentials: {
+    credentials?: {
       licenseNumber: string;
       licenseState: string;
       licenseExpiry: any;
       specializations: string[];
       certifications: string[];
     };
-    practice: {
+    practice?: {
       bio: string;
       yearsExperience: number;
       sessionTypes: string[];
@@ -47,13 +73,13 @@ interface TherapistProfile {
       hourlyRate: number;
       currency: string;
     };
-    availability: {
+    availability?: {
       timezone: string;
       bufferMinutes: number;
       maxDailyHours: number;
       advanceBookingDays: number;
     };
-    verification: {
+    verification?: {
       isVerified: boolean;
       verifiedAt?: any;
     };
@@ -62,7 +88,7 @@ interface TherapistProfile {
 
 export default function TherapistSettingsPage() {
   const { user, loading: authLoading } = useAuth();
-  const [profile, setProfile] = useState<TherapistProfile | null>(null);
+  const [profile, setProfile] = useState<TherapistProfileResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -88,18 +114,31 @@ export default function TherapistSettingsPage() {
   }, [user?.uid]);
 
   useEffect(() => {
+    console.log("Profile :: ", profile);
     if (profile) {
+      // Extract name from profile.profile (nested structure from API)
+      const displayName = profile.profile?.displayName || "";
+      const firstName = profile.profile?.firstName || "";
+      const lastName = profile.profile?.lastName || "";
+      const fullName = displayName || `${firstName} ${lastName}`.trim();
+      
       setFormData({
-        name: profile.name || "",
-        phone: profile.phone || "",
-        bio: profile.therapistProfile?.practice.bio || "",
-        yearsExperience: profile.therapistProfile?.practice.yearsExperience || 0,
-        hourlyRate: profile.therapistProfile?.practice.hourlyRate || 0,
-        timezone: profile.therapistProfile?.availability.timezone || "",
-        bufferMinutes: profile.therapistProfile?.availability.bufferMinutes || 15,
-        maxDailyHours: profile.therapistProfile?.availability.maxDailyHours || 8,
+        name: fullName,
+        phone: profile.profile?.phoneNumber || "",
+        bio: profile.therapistProfile?.practice?.bio || "",
+        yearsExperience: profile.therapistProfile?.practice?.yearsExperience || 0,
+        hourlyRate: profile.therapistProfile?.practice?.hourlyRate || 0,
+        timezone: profile.therapistProfile?.availability?.timezone || "",
+        bufferMinutes: profile.therapistProfile?.availability?.bufferMinutes || 15,
+        maxDailyHours: profile.therapistProfile?.availability?.maxDailyHours || 8,
         advanceBookingDays:
-          profile.therapistProfile?.availability.advanceBookingDays || 30,
+          profile.therapistProfile?.availability?.advanceBookingDays || 30,
+      });
+      
+      console.log("✅ Form data set:", {
+        name: fullName,
+        phone: profile.profile?.phoneNumber,
+        hasTherapistProfile: !!profile.therapistProfile,
       });
     }
   }, [profile]);
@@ -116,6 +155,9 @@ export default function TherapistSettingsPage() {
 
       if (response.ok) {
         const data = await response.json();
+        console.log("📋 Profile API Response:", JSON.stringify(data, null, 2));
+        console.log("👤 User data:", user);
+        console.log("📞 Phone from profile:", data.profile?.profile.phoneMumber);
         setProfile(data.profile);
       }
     } catch (error) {
@@ -126,13 +168,17 @@ export default function TherapistSettingsPage() {
   };
 
   const handlePhotoUpdated = (photoURL: string | null) => {
-    if (profile?.therapistProfile) {
+    if (profile) {
       setProfile({
         ...profile,
-        therapistProfile: {
+        profile: {
+          ...profile.profile,
+          avatarUrl: photoURL || undefined,
+        },
+        therapistProfile: profile.therapistProfile ? {
           ...profile.therapistProfile,
           photoURL: photoURL || undefined,
-        },
+        } : undefined,
       });
     }
   };
@@ -208,7 +254,7 @@ export default function TherapistSettingsPage() {
       </div>
 
       {/* Verification Status */}
-      {profile.therapistProfile?.verification.isVerified ? (
+      {profile.therapistProfile?.verification?.isVerified ? (
         <Card className="mb-6 bg-green-50 border-green-200">
           <CardContent className="p-4">
             <div className="flex items-center space-x-3">
@@ -272,7 +318,7 @@ export default function TherapistSettingsPage() {
           {user?.uid && (
             <ProfilePhotoUpload
               therapistId={user.uid}
-              currentPhotoURL={profile.therapistProfile?.photoURL}
+              currentPhotoURL={profile?.profile?.avatarUrl || profile.therapistProfile?.photoURL}
               onPhotoUpdated={handlePhotoUpdated}
             />
           )}
@@ -324,7 +370,7 @@ export default function TherapistSettingsPage() {
                   <Label>License Number</Label>
                   <Input
                     value={
-                      profile.therapistProfile?.credentials.licenseNumber || ""
+                      profile.therapistProfile?.credentials?.licenseNumber || ""
                     }
                     disabled
                   />
@@ -333,7 +379,7 @@ export default function TherapistSettingsPage() {
                   <Label>License State</Label>
                   <Input
                     value={
-                      profile.therapistProfile?.credentials.licenseState || ""
+                      profile.therapistProfile?.credentials?.licenseState || ""
                     }
                     disabled
                   />
@@ -343,7 +389,7 @@ export default function TherapistSettingsPage() {
               <div>
                 <Label>Specializations</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {profile.therapistProfile?.credentials.specializations.map(
+                  {profile.therapistProfile?.credentials?.specializations.map(
                     (spec, index) => (
                       <Badge key={index} variant="secondary">
                         {spec}
@@ -356,7 +402,7 @@ export default function TherapistSettingsPage() {
               <div>
                 <Label>Certifications</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {profile.therapistProfile?.credentials.certifications.map(
+                  {profile.therapistProfile?.credentials?.certifications.map(
                     (cert, index) => (
                       <Badge key={index} variant="outline">
                         {cert}
@@ -415,7 +461,7 @@ export default function TherapistSettingsPage() {
               <div>
                 <Label>Session Types</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {profile.therapistProfile?.practice.sessionTypes.map(
+                  {profile.therapistProfile?.practice?.sessionTypes.map(
                     (type, index) => (
                       <Badge key={index} variant="secondary">
                         {type}
@@ -428,7 +474,7 @@ export default function TherapistSettingsPage() {
               <div>
                 <Label>Languages</Label>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {profile.therapistProfile?.practice.languages.map(
+                  {profile.therapistProfile?.practice?.languages.map(
                     (lang, index) => (
                       <Badge key={index} variant="outline">
                         {lang}

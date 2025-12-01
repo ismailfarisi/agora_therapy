@@ -308,10 +308,46 @@ export class TherapistService {
 
       // Update therapist profile with photo URL
       const docRef = documents.therapistProfile(therapistId);
-      await updateDoc(docRef, {
-        photoURL: photoURL,
-        "metadata.updatedAt": serverTimestamp(),
-      });
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        // Update existing profile
+        await updateDoc(docRef, {
+          photoURL: photoURL,
+          "metadata.updatedAt": serverTimestamp(),
+        });
+      } else {
+        // Create new profile with photo URL
+        const newProfile: TherapistProfile = {
+          id: therapistId,
+          photoURL: photoURL,
+          credentials: {
+            licenseNumber: "",
+            licenseState: "",
+            licenseExpiry: Timestamp.now(),
+            specializations: [],
+            certifications: [],
+          },
+          practice: {
+            bio: "",
+            yearsExperience: 0,
+            sessionTypes: [],
+            languages: [],
+            hourlyRate: 0,
+            currency: "USD",
+          },
+          availability: {
+            timezone: "UTC",
+            bufferMinutes: 15,
+            maxDailyHours: 8,
+            advanceBookingDays: 30,
+          },
+          verification: {
+            isVerified: false,
+          },
+        };
+        await setDoc(docRef, newProfile);
+      }
 
       return photoURL;
     } catch (error) {

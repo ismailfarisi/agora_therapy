@@ -1,6 +1,6 @@
 /**
  * Onboarding Wizard Component
- * Multi-step onboarding flow for new users
+ * Multi-step onboarding flow for new users with proper state management
  */
 
 "use client";
@@ -25,11 +25,25 @@ import {
   ChevronRight,
   CheckCircle,
   User as UserIcon,
-  UserCheck,
+  Camera,
   Bell,
+  Briefcase,
+  DollarSign,
+  Shield,
+  Clock,
 } from "lucide-react";
 import { ProfileService } from "@/lib/services/profile-service";
+import { TherapistService } from "@/lib/services/therapist-service";
 import type { User } from "@/types/database";
+import { Textarea } from "@/components/ui/textarea";
+import { Timestamp } from "firebase/firestore";
+import { useOnboardingState, type OnboardingState } from "@/lib/hooks/useOnboardingState";
+import { TIMEZONES, TIMEZONE_GROUPS, getUserTimezone } from "@/lib/constants/timezones";
+import { LANGUAGES, LANGUAGE_GROUPS } from "@/lib/constants/languages";
+import { PhotoUploadStep } from "./PhotoUploadStep";
+import { ServicesSelectionStep } from "./ServicesSelectionStep";
+import { LanguageMultiSelect } from "./LanguageMultiSelect";
+import { AvailabilitySetupStep } from "./AvailabilitySetupStep";
 
 export interface OnboardingData {
   basicInfo: {
@@ -38,7 +52,9 @@ export interface OnboardingData {
     displayName: string;
     phoneNumber?: string;
     timezone: string;
-    locale: string;
+    locale: string; // Primary language for UI
+    languages: string[]; // All languages user speaks
+    photoURL?: string;
   };
   preferences: {
     notifications: {
@@ -49,6 +65,31 @@ export interface OnboardingData {
     privacy: {
       shareProfile: boolean;
       allowDirectMessages: boolean;
+    };
+  };
+  therapistProfile?: {
+    services: string[];
+    credentials: {
+      licenseNumber: string;
+      licenseState: string;
+      licenseExpiry: Date;
+      specializations: string[];
+      certifications: string[];
+    };
+    practice: {
+      bio: string;
+      yearsExperience: number;
+      sessionTypes: ("individual" | "couples" | "family" | "group")[];
+      languages: string[];
+      hourlyRate: number;
+      currency: string;
+    };
+    availability: {
+      timezone: string;
+      bufferMinutes: number;
+      maxDailyHours: number;
+      advanceBookingDays: number;
+      weeklyHours: { [dayOfWeek: number]: { start: string; end: string }[] };
     };
   };
 }
@@ -98,6 +139,8 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
+  const isTherapist = user.role === "therapist";
+  
   const [data, setData] = useState<OnboardingData>({
     basicInfo: {
       firstName: user.profile.firstName || "",
@@ -105,7 +148,8 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
       displayName: user.profile.displayName || "",
       phoneNumber: user.profile.phoneNumber || "",
       timezone: user.profile.timezone || "UTC",
-      locale: user.profile.locale || "en-US",
+      locale: user.profile.locale || "en", // Default to English language code
+      languages: user.profile.languages || ["en"], // Default to English
     },
     preferences: {
       notifications: user.preferences?.notifications || {
@@ -118,15 +162,49 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
         allowDirectMessages: true,
       },
     },
+    ...(isTherapist && {
+      therapistProfile: {
+        services: [], // Service IDs will be selected during onboarding
+        credentials: {
+          licenseNumber: "",
+          licenseState: "",
+          licenseExpiry: new Date(),
+          specializations: [],
+          certifications: [],
+        },
+        practice: {
+          bio: "",
+          yearsExperience: 0,
+          sessionTypes: [],
+          languages: ["en"], // Default to English language code
+          hourlyRate: 100,
+          currency: "USD",
+        },
+        availability: {
+          timezone: user.profile.timezone || "UTC",
+          bufferMinutes: 15,
+          maxDailyHours: 8,
+          advanceBookingDays: 30,
+          weeklyHours: {}, // Will be set in availability step
+        },
+      },
+    }),
   });
 
-  const steps: StepConfig[] = [
+  const clientSteps: StepConfig[] = [
     {
       id: "basic-info",
       title: "Basic Information",
       description: "Tell us about yourself",
       icon: UserIcon,
       required: true,
+    },
+    {
+      id: "photo",
+      title: "Profile Photo",
+      description: "Add your photo (optional)",
+      icon: Camera,
+      required: false,
     },
     {
       id: "preferences",
@@ -143,6 +221,67 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
       required: false,
     },
   ];
+
+  const therapistSteps: StepConfig[] = [
+    {
+      id: "basic-info",
+      title: "Basic Information",
+      description: "Tell us about yourself",
+      icon: UserIcon,
+      required: true,
+    },
+    {
+      id: "photo",
+      title: "Profile Photo",
+      description: "Add your photo (optional)",
+      icon: Camera,
+      required: false,
+    },
+    {
+      id: "services",
+      title: "Services Offered",
+      description: "Select services you provide",
+      icon: Briefcase,
+      required: true,
+    },
+    {
+      id: "credentials",
+      title: "Credentials",
+      description: "Your professional credentials",
+      icon: Shield,
+      required: true,
+    },
+    {
+      id: "practice",
+      title: "Practice Details",
+      description: "About your practice",
+      icon: Briefcase,
+      required: true,
+    },
+    {
+      id: "rates",
+      title: "Rates",
+      description: "Set your hourly rate",
+      icon: DollarSign,
+      required: true,
+    },
+    {
+      id: "availability",
+      title: "Availability",
+      description: "Set your weekly schedule",
+      icon: Clock,
+      required: true,
+    },
+    {
+      id: "complete",
+      title: "All Set!",
+      description: "Welcome to Mindgood",
+      icon: CheckCircle,
+      required: false,
+    },
+  ];
+
+  const steps = isTherapist ? therapistSteps : clientSteps;
 
   const progress = Math.round(((currentStep + 1) / steps.length) * 100);
 
@@ -171,11 +310,80 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
     }));
   };
 
+  const updateTherapistCredentials = (
+    field: keyof NonNullable<OnboardingData["therapistProfile"]>["credentials"],
+    value: any
+  ) => {
+    setData((prev) => ({
+      ...prev,
+      therapistProfile: prev.therapistProfile
+        ? {
+            ...prev.therapistProfile,
+            credentials: {
+              ...prev.therapistProfile.credentials,
+              [field]: value,
+            },
+          }
+        : prev.therapistProfile,
+    }));
+  };
+
+  const updateTherapistPractice = (
+    field: keyof NonNullable<OnboardingData["therapistProfile"]>["practice"],
+    value: any
+  ) => {
+    setData((prev) => ({
+      ...prev,
+      therapistProfile: prev.therapistProfile
+        ? {
+            ...prev.therapistProfile,
+            practice: {
+              ...prev.therapistProfile.practice,
+              [field]: value,
+            },
+          }
+        : prev.therapistProfile,
+    }));
+  };
+
+  const updateTherapistAvailability = (
+    field: keyof NonNullable<OnboardingData["therapistProfile"]>["availability"],
+    value: any
+  ) => {
+    setData((prev) => ({
+      ...prev,
+      therapistProfile: prev.therapistProfile
+        ? {
+            ...prev.therapistProfile,
+            availability: {
+              ...prev.therapistProfile.availability,
+              [field]: value,
+            },
+          }
+        : prev.therapistProfile,
+    }));
+  };
+
   const handleFinishOnboarding = async () => {
     setLoading(true);
 
     try {
+      // Update basic profile
       await ProfileService.updateProfile(user.id, data.basicInfo);
+      
+      // If therapist, save therapist profile
+      if (isTherapist && data.therapistProfile) {
+        const therapistData = {
+          ...data.therapistProfile,
+          credentials: {
+            ...data.therapistProfile.credentials,
+            licenseExpiry: Timestamp.fromDate(data.therapistProfile.credentials.licenseExpiry),
+          },
+        };
+        await TherapistService.saveProfile(user.id, therapistData);
+      }
+      
+      // Mark onboarding as complete
       await ProfileService.completeOnboarding(user.id);
 
       onComplete();
@@ -207,6 +415,34 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
         data.basicInfo.lastName &&
         data.basicInfo.displayName
       );
+    }
+
+    if (isTherapist && data.therapistProfile) {
+      if (currentStepConfig.id === "services") {
+        return data.therapistProfile.services.length > 0;
+      }
+
+      if (currentStepConfig.id === "credentials") {
+        return !!(
+          data.therapistProfile.credentials.licenseNumber &&
+          data.therapistProfile.credentials.licenseState
+        );
+      }
+
+      if (currentStepConfig.id === "practice") {
+        return !!(
+          data.therapistProfile.practice.bio &&
+          data.therapistProfile.practice.yearsExperience > 0
+        );
+      }
+
+      if (currentStepConfig.id === "rates") {
+        return data.therapistProfile.practice.hourlyRate > 0;
+      }
+
+      if (currentStepConfig.id === "availability") {
+        return Object.keys(data.therapistProfile.availability.weeklyHours).length > 0;
+      }
     }
 
     return true;
@@ -269,36 +505,223 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
                   <SelectTrigger>
                     <SelectValue placeholder="Select timezone" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {timezones.map((tz) => (
-                      <SelectItem key={tz.value} value={tz.value}>
-                        {tz.label}
-                      </SelectItem>
+                  <SelectContent className="max-h-[300px]">
+                    {Object.entries(TIMEZONE_GROUPS).map(([region, tzList]) => (
+                      <div key={region}>
+                        <div className="px-2 py-1.5 text-sm font-semibold text-gray-700 bg-gray-100">
+                          {region}
+                        </div>
+                        {tzList.map((tz) => (
+                          <SelectItem key={tz.value} value={tz.value}>
+                            {tz.label}
+                          </SelectItem>
+                        ))}
+                      </div>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="locale">Language</Label>
-                <Select
-                  value={data.basicInfo.locale}
-                  onValueChange={(value) => updateBasicInfo("locale", value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select language" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {locales.map((locale) => (
-                      <SelectItem key={locale.value} value={locale.value}>
-                        {locale.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-2 md:col-span-2">
+                <LanguageMultiSelect
+                  selectedLanguages={data.basicInfo.languages}
+                  onLanguagesChange={(languages) => {
+                    setData((prev) => ({
+                      ...prev,
+                      basicInfo: {
+                        ...prev.basicInfo,
+                        languages,
+                        locale: languages.length > 0 ? languages[0] : prev.basicInfo.locale,
+                      },
+                    }));
+                  }}
+                  label="Languages You Speak"
+                  placeholder="Search and select all languages you speak..."
+                />
               </div>
             </div>
           </div>
+        );
+
+      case "services":
+        if (!isTherapist || !data.therapistProfile) return null;
+        return (
+          <ServicesSelectionStep
+            selectedServices={data.therapistProfile.services}
+            onServicesChange={(services) => {
+              setData((prev: any) => ({
+                ...prev,
+                therapistProfile: prev.therapistProfile
+                  ? {
+                      ...prev.therapistProfile,
+                      services,
+                    }
+                  : prev.therapistProfile,
+              }));
+            }}
+          />
+        );
+
+      case "credentials":
+        if (!isTherapist || !data.therapistProfile) return null;
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="licenseNumber">License Number *</Label>
+                <Input
+                  id="licenseNumber"
+                  value={data.therapistProfile.credentials.licenseNumber}
+                  onChange={(e) => updateTherapistCredentials("licenseNumber", e.target.value)}
+                  placeholder="Enter your license number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="licenseState">License State *</Label>
+                <Input
+                  id="licenseState"
+                  value={data.therapistProfile.credentials.licenseState}
+                  onChange={(e) => updateTherapistCredentials("licenseState", e.target.value)}
+                  placeholder="e.g., CA, NY"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="licenseExpiry">License Expiry Date</Label>
+              <Input
+                id="licenseExpiry"
+                type="date"
+                value={data.therapistProfile.credentials.licenseExpiry.toISOString().split('T')[0]}
+                onChange={(e) => updateTherapistCredentials("licenseExpiry", new Date(e.target.value))}
+              />
+            </div>
+          </div>
+        );
+
+      case "practice":
+        if (!isTherapist || !data.therapistProfile) return null;
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="bio">Professional Bio *</Label>
+              <Textarea
+                id="bio"
+                value={data.therapistProfile.practice.bio}
+                onChange={(e) => updateTherapistPractice("bio", e.target.value)}
+                placeholder="Tell clients about your approach and experience..."
+                rows={6}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="yearsExperience">Years of Experience *</Label>
+                <Input
+                  id="yearsExperience"
+                  type="number"
+                  min="0"
+                  value={data.therapistProfile.practice.yearsExperience}
+                  onChange={(e) => updateTherapistPractice("yearsExperience", parseInt(e.target.value) || 0)}
+                />
+              </div>
+              <div className="space-y-2">
+                <LanguageMultiSelect
+                  selectedLanguages={data.therapistProfile.practice.languages}
+                  onLanguagesChange={(languages) => updateTherapistPractice("languages", languages)}
+                  label="Languages You Speak"
+                  placeholder="Search and select languages..."
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case "rates":
+        if (!isTherapist || !data.therapistProfile) return null;
+        return (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="hourlyRate">Hourly Rate (USD) *</Label>
+                <Input
+                  id="hourlyRate"
+                  type="number"
+                  min="0"
+                  value={data.therapistProfile.practice.hourlyRate}
+                  onChange={(e) => updateTherapistPractice("hourlyRate", parseInt(e.target.value) || 0)}
+                  placeholder="100"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bufferMinutes">Buffer Between Sessions (minutes)</Label>
+                <Input
+                  id="bufferMinutes"
+                  type="number"
+                  min="0"
+                  value={data.therapistProfile.availability.bufferMinutes}
+                  onChange={(e) => updateTherapistAvailability("bufferMinutes", parseInt(e.target.value) || 15)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="maxDailyHours">Max Daily Hours</Label>
+                <Input
+                  id="maxDailyHours"
+                  type="number"
+                  min="1"
+                  max="16"
+                  value={data.therapistProfile.availability.maxDailyHours}
+                  onChange={(e) => updateTherapistAvailability("maxDailyHours", parseInt(e.target.value) || 8)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="advanceBookingDays">Advance Booking (days)</Label>
+                <Input
+                  id="advanceBookingDays"
+                  type="number"
+                  min="1"
+                  value={data.therapistProfile.availability.advanceBookingDays}
+                  onChange={(e) => updateTherapistAvailability("advanceBookingDays", parseInt(e.target.value) || 30)}
+                />
+              </div>
+            </div>
+          </div>
+        );
+
+      case "availability":
+        if (!isTherapist || !data.therapistProfile) return null;
+        return (
+          <AvailabilitySetupStep
+            weeklyHours={data.therapistProfile.availability.weeklyHours}
+            onWeeklyHoursChange={(weeklyHours) => {
+              setData((prev: any) => ({
+                ...prev,
+                therapistProfile: prev.therapistProfile
+                  ? {
+                      ...prev.therapistProfile,
+                      availability: {
+                        ...prev.therapistProfile.availability,
+                        weeklyHours,
+                      },
+                    }
+                  : prev.therapistProfile,
+              }));
+            }}
+          />
+        );
+
+      case "photo":
+        return (
+          <PhotoUploadStep
+            userId={user.id}
+            currentPhotoURL={data.basicInfo.photoURL}
+            onPhotoUploaded={(photoURL) => updateBasicInfo("photoURL", photoURL)}
+            uploading={loading}
+            setUploading={setLoading}
+          />
         );
 
       case "preferences":

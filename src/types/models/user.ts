@@ -18,7 +18,8 @@ export interface User {
     phoneNumber?: string;
     avatarUrl?: string;
     timezone: string;
-    locale: string;
+    locale: string; // Primary UI language
+    languages?: string[]; // All languages user speaks (language codes)
   };
   role: UserRole;
   status: UserStatus;

@@ -225,14 +225,31 @@ export async function signOutUser(): Promise<void> {
 export async function getCurrentUserData(): Promise<AppUser | null> {
   try {
     const user = auth.currentUser;
-    if (!user) return null;
+    console.log("🔍 getCurrentUserData - Auth current user:", user?.uid);
+    
+    if (!user) {
+      console.log("❌ getCurrentUserData - No current user");
+      return null;
+    }
 
-    const userDoc = await getDoc(documents.user(user.uid));
-    if (!userDoc.exists()) return null;
+    const userDocRef = documents.user(user.uid);
+    console.log("🔍 getCurrentUserData - Fetching doc for user:", user.uid);
+    
+    const userDoc = await getDoc(userDocRef);
+    console.log("🔍 getCurrentUserData - Doc exists:", userDoc.exists());
+    
+    if (!userDoc.exists()) {
+      console.log("❌ getCurrentUserData - User document does not exist");
+      return null;
+    }
 
-    return userDoc.data() as AppUser;
+    const userData = userDoc.data() as AppUser;
+    console.log("✅ getCurrentUserData - User data:", JSON.stringify(userData, null, 2));
+    console.log("📞 getCurrentUserData - Phone number:", userData?.profile?.phoneNumber);
+    
+    return userData;
   } catch (error) {
-    console.error("Error getting current user data:", error);
+    console.error("❌ Error getting current user data:", error);
     return null;
   }
 }
