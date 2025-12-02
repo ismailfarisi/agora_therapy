@@ -173,11 +173,14 @@ export default function PsychologistDetail() {
               <p className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
                 ${(psychologist.hourlyRate / 100).toFixed(2)}/hr
               </p>
-              <button className="w-full py-3 bg-gradient-to-r from-teal-500 to-blue-600 text-white rounded-md hover:opacity-90 transition-opacity">
+              <Link
+                href={`/booking/${psychologist.id}`}
+                className="block w-full py-3 text-center bg-gradient-to-r from-teal-500 to-blue-600 text-white rounded-md hover:opacity-90 transition-opacity"
+              >
                 Book Consultation
-              </button>
+              </Link>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-                Booking integration coming soon
+                50-minute session
               </p>
             </div>
           </div>
