@@ -131,7 +131,7 @@ const Footer = () => {
                 <strong>Email:</strong> support@mindgood.com
               </li>
               <li className="text-gray-600 dark:text-gray-400 text-sm">
-                <strong>Phone:</strong> +91 98765 43210
+                <strong>Phone:</strong> +971 505134930
               </li>
               <li className="text-gray-600 dark:text-gray-400 text-sm">
                 <strong>Hours:</strong> Mon-Sat: 9am - 7pm

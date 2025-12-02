@@ -45,10 +45,10 @@ export default function ContactPage() {
             Available Monday to Friday, 9am - 6pm
           </p>
           <a 
-            href="tel:+918001234567" 
+            href="tel:+971505134930" 
             className="text-teal-600 dark:text-teal-400 font-medium hover:underline"
           >
-            +91 800 123 4567
+            +971 505134930
           </a>
         </div>
         
@@ -61,8 +61,9 @@ export default function ContactPage() {
             Our headquarters location
           </p>
           <address className="text-teal-600 dark:text-teal-400 font-medium not-italic">
-            123 Mental Health Street<br />
-            Bangalore, Karnataka 560001
+            NextAuras Global Solutions LLC FZ<br />
+            6th Floor, Meydan GrandStand , Nad Al Sheba 1, Meydan Rd<br />
+            Dubai, UAE, 9305
           </address>
         </div>
       </div>
