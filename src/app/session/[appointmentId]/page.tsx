@@ -1,15 +1,24 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { VideoSession } from "@/components/video/VideoSession";
 import { AppointmentService } from "@/lib/services/appointment-service";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Video } from "lucide-react";
 import type { Appointment } from "@/types/database";
+
+// Dynamically import VideoSession with no SSR
+const VideoSession = dynamic(
+  () => import("@/components/video/VideoSession").then(mod => ({ default: mod.VideoSession })),
+  { 
+    ssr: false,
+    loading: () => <div className="flex justify-center p-8"><LoadingSpinner /></div>
+  }
+);
 
 export default function SessionPage() {
   const params = useParams();
@@ -144,6 +153,12 @@ export default function SessionPage() {
             appointmentId={appointmentId}
             userId={user.uid}
             userRole={userRole}
+            duration={appointment.duration || 60}
+            scheduledFor={
+              appointment.scheduledFor instanceof Date
+                ? appointment.scheduledFor
+                : (appointment.scheduledFor as any)?.toDate?.() || new Date()
+            }
             onSessionEnd={handleSessionEnd}
             className="w-full"
           />

@@ -260,11 +260,10 @@ export class AgoraService {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${await this.getFirebaseToken()}`,
         },
         body: JSON.stringify({
           channelName,
-          uid,
+          userId: uid,
         }),
       });
 
@@ -307,11 +306,12 @@ export class AgoraService {
 
       const token = await this.generateToken(config.channelName, config.userId);
 
+      // Use UID 0 for string-based user IDs
       await this.client.join(
         process.env.NEXT_PUBLIC_AGORA_APP_ID!,
         config.channelName,
         token,
-        config.userId
+        0
       );
 
       // Create and publish local tracks
