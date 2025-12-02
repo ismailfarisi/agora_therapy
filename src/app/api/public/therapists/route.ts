@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     const specialization = searchParams.get('specialization');
     const language = searchParams.get('language');
     const minExperience = searchParams.get('minExperience');
+    const featured = searchParams.get('featured') === 'true';
 
     // Fetch all active users with therapist role
     let usersQuery = db
@@ -46,6 +47,10 @@ export async function GET(request: NextRequest) {
         }
 
         // Apply filters
+        if (featured && !profileData.isFeatured) {
+          return null;
+        }
+
         if (specialization && !profileData.credentials?.specializations?.includes(specialization)) {
           return null;
         }
@@ -77,6 +82,7 @@ export async function GET(request: NextRequest) {
           rating: 5.0, // TODO: Calculate from reviews
           reviewCount: 0, // TODO: Get from reviews collection
           isVerified: true,
+          isFeatured: profileData.isFeatured || false,
           verifiedAt: profileData.verification?.verifiedAt,
         };
       })

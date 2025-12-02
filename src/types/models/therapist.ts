@@ -40,6 +40,7 @@ export interface TherapistProfile {
     verifiedAt?: Timestamp;
     verifiedBy?: string;
   };
+  isFeatured?: boolean; // Manually set in Firebase to feature on homepage
 }
 
 export interface TherapistOnboardingData {
@@ -122,6 +123,7 @@ export interface TherapistAdminView {
       verifiedAt?: string; // ISO string for API responses
       verifiedBy?: string;
     };
+    isFeatured?: boolean; // Manually set in Firebase to feature on homepage
   };
   status: string;
   metadata?: {

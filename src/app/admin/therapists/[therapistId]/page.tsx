@@ -28,6 +28,7 @@ import {
   Languages,
   FileText,
   AlertCircle,
+  Star,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -171,6 +172,43 @@ export default function TherapistDetailPage({
     }
   };
 
+  const handleToggleFeatured = async () => {
+    const isFeatured = therapist?.therapistProfile?.isFeatured || false;
+    const action = isFeatured ? "unfeature" : "feature";
+    
+    if (!confirm(`Are you sure you want to ${action} this therapist?`)) {
+      return;
+    }
+    
+    try {
+      setActionLoading(true);
+      const response = await fetch(
+        `/api/admin/therapists/${resolvedParams.therapistId}/feature`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ isFeatured: !isFeatured }),
+        }
+      );
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        alert(`Therapist ${action}d successfully!`);
+        await fetchTherapistDetail();
+      } else {
+        alert(`Error: ${data.error || `Failed to ${action} therapist`}`);
+      }
+    } catch (error) {
+      console.error(`Error ${action}ing therapist:`, error);
+      alert('An unexpected error occurred. Please try again.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading || dataLoading) {
     return <PageLoadingSpinner text="Loading therapist details..." />;
   }
@@ -215,6 +253,16 @@ export default function TherapistDetailPage({
               </Button>
             </Link>
             <div className="flex gap-2">
+              {therapist.therapistProfile?.verification?.isVerified && (
+                <Button
+                  onClick={handleToggleFeatured}
+                  disabled={actionLoading}
+                  variant={therapist.therapistProfile?.isFeatured ? "default" : "outline"}
+                >
+                  <Star className={`w-4 h-4 mr-2 ${therapist.therapistProfile?.isFeatured ? 'fill-current' : ''}`} />
+                  {therapist.therapistProfile?.isFeatured ? 'Featured' : 'Feature'}
+                </Button>
+              )}
               {!therapist.therapistProfile?.verification?.isVerified && (
                 <>
                   <Button
@@ -246,7 +294,7 @@ export default function TherapistDetailPage({
               <h1 className="text-3xl font-bold text-gray-900">
                 {therapist.profile.displayName}
               </h1>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {therapist.therapistProfile?.verification?.isVerified ? (
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
                     <CheckCircle className="w-4 h-4 mr-1" />
@@ -267,6 +315,12 @@ export default function TherapistDetailPage({
                 >
                   {therapist.status}
                 </span>
+                {therapist.therapistProfile?.isFeatured && (
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                    <Star className="w-4 h-4 mr-1 fill-current" />
+                    Featured
+                  </span>
+                )}
               </div>
             </div>
           </div>

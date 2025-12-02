@@ -10,6 +10,9 @@ export interface Service {
   icon?: string;
   category: ServiceCategory;
   isActive: boolean;
+  detailedDescription?: string;
+  helpPoints?: string[];
+  imageUrl?: string;
 }
 
 export type ServiceCategory = 
@@ -28,6 +31,14 @@ export const AVAILABLE_SERVICES: Service[] = [
     description: "Treatment for anxiety disorders, panic attacks, and stress management",
     category: "mental-health",
     isActive: true,
+    detailedDescription: "Overcome anxiety and panic attacks with evidence-based therapeutic approaches. We help you understand your anxiety triggers and develop practical tools to manage symptoms.",
+    helpPoints: [
+      "Identify and understand anxiety triggers",
+      "Learn relaxation and breathing techniques",
+      "Develop cognitive strategies to manage anxious thoughts",
+      "Build confidence in handling anxiety-provoking situations",
+      "Create a personalized anxiety management toolkit"
+    ],
   },
   {
     id: "depression",
@@ -35,6 +46,14 @@ export const AVAILABLE_SERVICES: Service[] = [
     description: "Support for depression, mood disorders, and emotional well-being",
     category: "mental-health",
     isActive: true,
+    detailedDescription: "Find hope and healing from depression with compassionate, evidence-based therapy. Our therapists provide a safe space to explore your feelings and develop strategies for recovery.",
+    helpPoints: [
+      "Understand the root causes of your depression",
+      "Develop healthy coping mechanisms and self-care routines",
+      "Challenge negative thought patterns",
+      "Rebuild motivation and find meaning in daily activities",
+      "Create a sustainable path toward emotional well-being"
+    ],
   },
   {
     id: "stress-management",
@@ -42,6 +61,14 @@ export const AVAILABLE_SERVICES: Service[] = [
     description: "Techniques for managing stress and building resilience",
     category: "mental-health",
     isActive: true,
+    detailedDescription: "Learn effective strategies to manage daily stress, workplace pressure, and life challenges. Our therapists help you develop personalized coping mechanisms and build long-term resilience.",
+    helpPoints: [
+      "Identify workplace stressors and develop coping strategies",
+      "Learn techniques for managing burnout and maintaining work-life balance",
+      "Develop communication skills for difficult workplace situations",
+      "Create personalized stress management plans",
+      "Build resilience and emotional regulation skills"
+    ],
   },
   {
     id: "ocd",
@@ -95,6 +122,14 @@ export const AVAILABLE_SERVICES: Service[] = [
     description: "Family therapy and conflict resolution",
     category: "relationship",
     isActive: true,
+    detailedDescription: "Strengthen family bonds and resolve conflicts with professional family therapy. We help families improve communication and build healthier relationships.",
+    helpPoints: [
+      "Improve family communication patterns",
+      "Resolve conflicts and misunderstandings",
+      "Navigate family transitions and changes",
+      "Strengthen parent-child relationships",
+      "Create a more harmonious family environment"
+    ],
   },
   {
     id: "divorce-support",
@@ -171,6 +206,14 @@ export const AVAILABLE_SERVICES: Service[] = [
     description: "Support for attention deficit hyperactivity disorder",
     category: "specialized",
     isActive: true,
+    detailedDescription: "Get specialized support for ADHD management in children and adults. Learn strategies to improve focus, organization, and daily functioning.",
+    helpPoints: [
+      "Develop organizational and time management skills",
+      "Learn strategies to improve focus and attention",
+      "Manage impulsivity and emotional regulation",
+      "Create structured routines and systems",
+      "Build self-esteem and coping strategies"
+    ],
   },
   {
     id: "autism",
@@ -199,6 +242,14 @@ export const AVAILABLE_SERVICES: Service[] = [
     description: "Career guidance and workplace issues",
     category: "specialized",
     isActive: true,
+    detailedDescription: "Navigate career transitions, workplace challenges, and professional growth with expert guidance. We help you align your career with your values and aspirations.",
+    helpPoints: [
+      "Explore career options and identify your strengths",
+      "Develop strategies for career advancement",
+      "Navigate workplace conflicts and politics",
+      "Build confidence in professional settings",
+      "Create actionable career development plans"
+    ],
   },
 ];
 
