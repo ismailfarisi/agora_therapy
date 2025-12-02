@@ -12,7 +12,6 @@ import {
   AlertCircle,
   Clock,
   Shield,
-  FileText,
   Upload,
 } from "lucide-react";
 import { TherapistProfile } from "@/types/database";
@@ -199,7 +198,7 @@ export function VerificationStatus({
             </div>
             <ul className="text-sm text-green-800 space-y-1">
               <li>• Accept client bookings and appointments</li>
-              <li>• Display "Verified Professional" badge</li>
+              <li>• Display &quot;Verified Professional&quot; badge</li>
               <li>• Enhanced profile visibility in search results</li>
               <li>• Access to advanced practice management tools</li>
             </ul>

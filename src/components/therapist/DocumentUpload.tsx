@@ -88,11 +88,12 @@ export function DocumentUpload({
 
       documentUploadSchema.parse(validationData);
       setSelectedFile(file);
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as { errors?: Array<{ path: string[]; message: string }> };
       const fieldErrors: Record<string, string> = {};
-      if (error.errors) {
-        error.errors.forEach((err: any) => {
-          fieldErrors[err.path[0]] = err.message;
+      if (err.errors) {
+        err.errors.forEach((validationErr) => {
+          fieldErrors[validationErr.path[0]] = validationErr.message;
         });
       }
       setErrors(fieldErrors);
@@ -179,14 +180,15 @@ export function DocumentUpload({
       setTimeout(() => {
         setIsUploading(false);
       }, 1000);
-    } catch (error: any) {
-      console.error("Upload error:", error);
-      setErrors({ upload: error.message || "Failed to upload document" });
+    } catch (error) {
+      const err = error as Error;
+      console.error("Upload error:", err);
+      setErrors({ upload: err.message || "Failed to upload document" });
       setIsUploading(false);
       setUploadProgress(0);
 
       if (onUploadError) {
-        onUploadError(error.message || "Failed to upload document");
+        onUploadError(err.message || "Failed to upload document");
       }
     }
   };
@@ -197,9 +199,10 @@ export function DocumentUpload({
       setUploadedDocuments((prev) =>
         prev.filter((doc) => doc.id !== document.id)
       );
-    } catch (error: any) {
-      console.error("Delete error:", error);
-      setErrors({ delete: error.message || "Failed to delete document" });
+    } catch (error) {
+      const err = error as Error;
+      console.error("Delete error:", err);
+      setErrors({ delete: err.message || "Failed to delete document" });
     }
   };
 

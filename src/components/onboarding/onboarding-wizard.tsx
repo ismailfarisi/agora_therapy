@@ -319,7 +319,7 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
 
   const updateTherapistCredentials = (
     field: keyof NonNullable<OnboardingData["therapistProfile"]>["credentials"],
-    value: any
+    value: string | string[] | boolean | number | Date
   ) => {
     setData((prev) => ({
       ...prev,
@@ -337,7 +337,7 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
 
   const updateTherapistPractice = (
     field: keyof NonNullable<OnboardingData["therapistProfile"]>["practice"],
-    value: any
+    value: string | string[] | boolean | number
   ) => {
     setData((prev) => ({
       ...prev,
@@ -355,7 +355,7 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
 
   const updateTherapistAvailability = (
     field: keyof NonNullable<OnboardingData["therapistProfile"]>["availability"],
-    value: any
+    value: number | string | Record<number, { start: string; end: string }[]>
   ) => {
     setData((prev) => ({
       ...prev,
@@ -413,9 +413,10 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
       if (data.therapistProfile) {
         updateTherapistCredentials("certifications", [...certificateURLs, ...newURLs]);
       }
-    } catch (error: any) {
-      console.error("Error uploading certificates:", error);
-      alert(error.message || "Failed to upload certificates");
+    } catch (error) {
+      const err = error as Error;
+      console.error("Error uploading certificates:", err);
+      alert(err.message || "Failed to upload certificates");
     } finally {
       setUploadingCertificate(false);
       // Reset the input
@@ -623,7 +624,7 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
           <ServicesSelectionStep
             selectedServices={data.therapistProfile.services}
             onServicesChange={(services) => {
-              setData((prev: any) => ({
+              setData((prev) => ({
                 ...prev,
                 therapistProfile: prev.therapistProfile
                   ? {
@@ -883,7 +884,7 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
           <AvailabilitySetupStep
             weeklyHours={data.therapistProfile.availability.weeklyHours}
             onWeeklyHoursChange={(weeklyHours) => {
-              setData((prev: any) => ({
+              setData((prev) => ({
                 ...prev,
                 therapistProfile: prev.therapistProfile
                   ? {

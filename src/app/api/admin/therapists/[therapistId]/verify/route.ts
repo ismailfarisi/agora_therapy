@@ -10,6 +10,7 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ therapistId: string }> }
 ) {
+  const { therapistId } = await context.params;
   try {
     // Verify admin authentication
     const token = request.cookies.get("auth-token")?.value;

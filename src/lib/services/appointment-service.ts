@@ -4,33 +4,25 @@
  */
 
 import {
-  collection,
   doc,
   getDocs,
   getDoc,
-  addDoc,
   updateDoc,
-  deleteDoc,
   query,
   where,
   orderBy,
   onSnapshot,
   Timestamp,
   serverTimestamp,
-  and,
-  or,
-  writeBatch,
   runTransaction,
   FieldValue,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase/client";
-import { collections, documents, generateId } from "@/lib/firebase/collections";
+import { collections, documents } from "@/lib/firebase/collections";
 import {
   Appointment,
   BookingRequest,
   AppointmentStatus,
-  SessionType,
-  TherapistProfile,
 } from "@/types/database";
 import { businessConfig } from "@/lib/config";
 import { AvailabilityService } from "./availability-service";

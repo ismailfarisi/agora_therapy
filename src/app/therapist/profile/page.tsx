@@ -201,9 +201,12 @@ export default function TherapistProfilePage() {
           ...profileData.credentials,
           licenseExpiry:
             profile?.credentials.licenseExpiry ||
-            new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // Default 1 year from now
+            Timestamp.fromDate(new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)), // Default 1 year from now
         },
-        practice: profileData.practice,
+        practice: {
+          ...profileData.practice,
+          sessionTypes: profileData.practice.sessionTypes as ("individual" | "couples" | "family" | "group")[],
+        },
         availability: profileData.availability,
       };
 

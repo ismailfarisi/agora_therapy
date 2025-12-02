@@ -74,6 +74,7 @@ export interface BookingRequest {
   date: Date;
   duration: number;
   sessionType: SessionType;
+  deliveryType?: SessionDeliveryType;
   clientNotes?: string;
 }
 

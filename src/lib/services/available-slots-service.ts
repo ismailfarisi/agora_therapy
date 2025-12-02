@@ -16,13 +16,10 @@ import {
   startOfDay,
   endOfDay,
   isSameDay,
-  parseISO,
-  isValid,
 } from "date-fns";
 import {
   convertTimezone,
   getUserTimezone,
-  formatInTimezone,
 } from "@/lib/utils/timezone-utils";
 
 export interface SlotCalculationOptions {

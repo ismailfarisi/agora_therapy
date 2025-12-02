@@ -6,6 +6,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { Timestamp } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,17 +54,28 @@ const mockTherapist: TherapistProfile = {
   id: "test-therapist-1",
   availability: {
     timezone: "UTC",
-    weeklySchedule: {},
+    bufferMinutes: 15,
+    maxDailyHours: 8,
+    advanceBookingDays: 30,
   },
   practice: {
+    bio: "Test therapist",
     hourlyRate: 150,
     currency: "USD",
-    sessionTypes: ["individual", "group", "consultation", "follow_up"],
+    sessionTypes: ["individual", "group"],
+    languages: ["English"],
     yearsExperience: 8,
   },
+  services: [],
   credentials: {
+    licenseNumber: "TEST123",
+    licenseState: "CA",
+    licenseExpiry: Timestamp.now(),
     specializations: ["Anxiety", "Depression", "PTSD"],
     certifications: [],
+  },
+  verification: {
+    isVerified: false,
   },
 };
 

@@ -8,8 +8,9 @@ import { FieldValue } from "firebase-admin/firestore";
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { reviewId: string } }
+  { params }: { params: Promise<{ reviewId: string }> }
 ) {
+  const { reviewId } = await params;
   try {
     // Verify admin authentication
     const token = request.cookies.get("auth-token")?.value;
@@ -27,7 +28,6 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const reviewId = params.reviewId;
 
     // Update review status
     await db.collection("reviews").doc(reviewId).update({

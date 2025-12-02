@@ -4,8 +4,6 @@
  */
 
 import {
-  collection,
-  doc,
   getDocs,
   getDoc,
   addDoc,
@@ -15,11 +13,9 @@ import {
   where,
   orderBy,
   onSnapshot,
-  Timestamp,
   serverTimestamp,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import { collections, documents, generateId } from "@/lib/firebase/collections";
+import { collections, documents } from "@/lib/firebase/collections";
 import { TimeSlot } from "@/types/database";
 import { businessConfig } from "@/lib/config";
 

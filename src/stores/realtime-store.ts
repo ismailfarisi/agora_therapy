@@ -355,34 +355,29 @@ export const useRealtimeStore = create<RealtimeState>()(
 
       markDataAsStale: (type, id) => {
         set((state) => {
-          let targetMap;
-          switch (type) {
-            case "availability":
-              targetMap = new Map(state.availabilityUpdates);
-              break;
-            case "appointments":
-              targetMap = new Map(state.appointmentUpdates);
-              break;
-            case "overrides":
-              targetMap = new Map(state.overrideUpdates);
-              break;
-            default:
-              return state;
+          if (type === "availability") {
+            const targetMap = new Map(state.availabilityUpdates);
+            const existing = targetMap.get(id);
+            if (existing) {
+              targetMap.set(id, { ...existing, isStale: true });
+            }
+            return { ...state, availabilityUpdates: targetMap };
+          } else if (type === "appointments") {
+            const targetMap = new Map(state.appointmentUpdates);
+            const existing = targetMap.get(id);
+            if (existing) {
+              targetMap.set(id, { ...existing, isStale: true });
+            }
+            return { ...state, appointmentUpdates: targetMap };
+          } else if (type === "overrides") {
+            const targetMap = new Map(state.overrideUpdates);
+            const existing = targetMap.get(id);
+            if (existing) {
+              targetMap.set(id, { ...existing, isStale: true });
+            }
+            return { ...state, overrideUpdates: targetMap };
           }
-
-          const existing = targetMap.get(id);
-          if (existing) {
-            targetMap.set(id, { ...(existing as any), isStale: true });
-          }
-
-          return {
-            ...state,
-            [type === "availability"
-              ? "availabilityUpdates"
-              : type === "appointments"
-              ? "appointmentUpdates"
-              : "overrideUpdates"]: targetMap,
-          };
+          return state;
         });
       },
 
@@ -454,7 +449,7 @@ export const useRealtimeStore = create<RealtimeState>()(
         });
 
         // Store cleanup functions (you might want to store these in state if needed)
-        (window as any).__realtimeCleanup = () => {
+        (window as Window & { __realtimeCleanup?: () => void }).__realtimeCleanup = () => {
           unsubscribeConnection();
           unsubscribeConflicts();
           unsubscribeEvents();
@@ -463,9 +458,9 @@ export const useRealtimeStore = create<RealtimeState>()(
 
       cleanup: () => {
         // Call stored cleanup functions
-        const windowWithCleanup = window as any;
+        const windowWithCleanup = window as Window & { __realtimeCleanup?: () => void };
         if (windowWithCleanup.__realtimeCleanup) {
-          (windowWithCleanup.__realtimeCleanup as () => void)();
+          windowWithCleanup.__realtimeCleanup();
           delete windowWithCleanup.__realtimeCleanup;
         }
 

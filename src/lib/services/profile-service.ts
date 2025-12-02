@@ -3,14 +3,14 @@
  * Handles profile management operations
  */
 
-import { doc, updateDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import {  updateDoc, serverTimestamp, getDoc } from "firebase/firestore";
 import {
   ref,
   uploadBytes,
   getDownloadURL,
   deleteObject,
 } from "firebase/storage";
-import { db, storage } from "@/lib/firebase/client";
+import { storage } from "@/lib/firebase/client";
 import { documents } from "@/lib/firebase/collections";
 import type { User } from "@/types/database";
 
@@ -35,7 +35,7 @@ export class ProfileService {
     try {
       const userRef = documents.user(userId);
 
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         "profile.firstName": data.firstName,
         "profile.lastName": data.lastName,
         "profile.displayName": data.displayName,
@@ -84,7 +84,7 @@ export class ProfileService {
           await deleteObject(oldImageRef);
         } catch (error) {
           // Ignore error if file doesn't exist
-          console.log("Old avatar file not found, continuing...");
+          console.log("Old avatar file not found, continuing...", error);
         }
       }
 

@@ -178,7 +178,7 @@ export default function ClientDashboard() {
                 <div>
                   <p className="text-sm font-medium text-gray-600">Member Since</p>
                   <p className="text-xl font-bold text-gray-900">
-                    {new Date(userData.createdAt as any).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                    {userData.metadata?.createdAt ? new Date(userData.metadata.createdAt as unknown as Date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'}
                   </p>
                 </div>
                 <User className="h-10 w-10 text-purple-500" />

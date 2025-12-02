@@ -62,9 +62,10 @@ export function ProfilePhotoUpload({
       setPreviewURL(photoURL);
       onPhotoUpdated(photoURL);
       toast.success("Photo Uploaded", "Your profile photo has been updated successfully.");
-    } catch (error: any) {
-      console.error("Error uploading photo:", error);
-      toast.error("Upload Failed", error.message || "Failed to upload photo. Please try again.");
+    } catch (error) {
+      const err = error as Error;
+      console.error("Error uploading photo:", err);
+      toast.error("Upload Failed", err.message || "Failed to upload photo. Please try again.");
       setPreviewURL(currentPhotoURL || null);
     } finally {
       setUploading(false);
@@ -85,8 +86,9 @@ export function ProfilePhotoUpload({
       setPreviewURL(null);
       onPhotoUpdated(null);
       toast.success("Photo Deleted", "Your profile photo has been removed.");
-    } catch (error: any) {
-      console.error("Error deleting photo:", error);
+    } catch (error) {
+      const err = error as Error;
+      console.error("Error deleting photo:", err);
       toast.error("Delete Failed", "Failed to delete photo. Please try again.");
     } finally {
       setDeleting(false);

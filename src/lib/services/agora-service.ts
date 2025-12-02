@@ -93,6 +93,8 @@ export class AgoraService {
     user: IAgoraRTCRemoteUser,
     mediaType: "audio" | "video"
   ) => {
+    console.log("User unpublished:", user.uid);
+    console.log("Media type:", mediaType);
     this.updateState({
       remoteUsers: this.client.remoteUsers,
       participantCount:
@@ -306,7 +308,7 @@ export class AgoraService {
       const token = await this.generateToken(config.channelName, config.userId);
 
       await this.client.join(
-        config.agora.appId,
+        process.env.NEXT_PUBLIC_AGORA_APP_ID!,
         config.channelName,
         token,
         config.userId

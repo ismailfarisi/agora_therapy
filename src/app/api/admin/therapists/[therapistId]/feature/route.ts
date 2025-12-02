@@ -5,10 +5,11 @@ import { getAdminAuth, getAdminFirestore } from "@/lib/firebase/admin";
  * Toggle featured status for a therapist
  * Admin only
  */
-export async function POST(
+export async function PATCH(
   request: NextRequest,
   context: { params: Promise<{ therapistId: string }> }
 ) {
+  const { therapistId } = await context.params;
   try {
     // Verify admin authentication
     const token = request.cookies.get("auth-token")?.value;

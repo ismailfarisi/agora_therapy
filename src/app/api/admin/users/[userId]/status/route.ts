@@ -8,8 +8,9 @@ import { FieldValue } from "firebase-admin/firestore";
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
+  const { userId } = await params;
   try {
     // Verify admin authentication
     const token = request.cookies.get("auth-token")?.value;
@@ -39,7 +40,6 @@ export async function PATCH(
     }
 
     // Update user status
-    const userId = params.userId;
     await db.collection("users").doc(userId).update({
       status,
       "metadata.updatedAt": FieldValue.serverTimestamp(),

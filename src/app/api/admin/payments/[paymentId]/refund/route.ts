@@ -11,8 +11,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { paymentId: string } }
+  { params }: { params: Promise<{ paymentId: string }> }
 ) {
+  const { paymentId } = await params;
   try {
     // Verify admin authentication
     const token = request.cookies.get("auth-token")?.value;
@@ -30,7 +31,6 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const paymentId = params.paymentId;
     const body = await request.json();
     const { reason = "Admin initiated refund" } = body;
 
@@ -115,13 +115,14 @@ export async function POST(
         refundId: refundRef.id,
         stripeRefundId: refund.id,
       });
-    } catch (stripeError: any) {
-      console.error("Stripe refund error:", stripeError);
+    } catch (stripeError) {
+      const error = stripeError as Error;
+      console.error("Stripe refund error:", error);
 
       // Update refund as failed
       await refundRef.update({
         status: "failed",
-        failureReason: stripeError.message || "Stripe refund failed",
+        failureReason: error.message || "Stripe refund failed",
         updatedAt: FieldValue.serverTimestamp(),
       });
 

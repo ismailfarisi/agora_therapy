@@ -5,25 +5,20 @@
 
 import {
   format,
-  addMinutes,
   isBefore,
   isAfter,
-  isSameDay,
-  parseISO,
 } from "date-fns";
 import {
   BookingRequest,
   Appointment,
-  SessionType,
   AppointmentStatus,
   TimeSlot,
   TherapistProfile,
+  SessionDeliveryType,
 } from "@/types/database";
 import { businessConfig } from "@/lib/config";
 import {
-  convertTimezone,
   getUserTimezone,
-  formatInTimezone,
 } from "./timezone-utils";
 
 export interface BookingValidationResult {
@@ -83,6 +78,10 @@ export function validateBookingRequest(
     errors.push("Session type is required");
   }
 
+  if(therapistProfile?.verification?.isVerified) {
+    errors.push("Therapist is not verified");
+  }
+
   // Validate date constraints
   if (bookingRequest.date) {
     const now = new Date();
@@ -119,13 +118,13 @@ export function validateBookingRequest(
     errors.push(`Duration cannot exceed ${businessConfig.maxDailyHours} hours`);
   }
 
-  // Validate session type
-  const validSessionTypes: SessionType[] = ["video", "phone", "in_person"];
+  // Validate delivery type
+  const validDeliveryTypes: SessionDeliveryType[] = ["video", "phone", "in_person"];
   if (
-    bookingRequest.sessionType &&
-    !validSessionTypes.includes(bookingRequest.sessionType)
+    bookingRequest.deliveryType &&
+    !validDeliveryTypes.includes(bookingRequest.deliveryType)
   ) {
-    errors.push("Invalid session type");
+    errors.push("Invalid delivery type");
   }
 
   return {
@@ -214,8 +213,8 @@ export function formatAppointmentTime(
       hour12: !format24Hour,
     }),
     datetime: appointmentDate.toLocaleString("en-US", {
-      timeZone: displayTimezone,
       ...formatOptions,
+      timeZone: displayTimezone,
       weekday: "short",
       month: "short",
       day: "numeric",
@@ -414,13 +413,13 @@ export function generateBookingConfirmation(
     "The therapist will confirm your appointment within 24 hours",
   ];
 
-  if (appointment.session.type === "video") {
+  if (appointment.session.deliveryType === "video") {
     nextSteps.push(
       "A video session link will be provided before your appointment"
     );
-  } else if (appointment.session.type === "phone") {
+  } else if (appointment.session.deliveryType === "phone") {
     nextSteps.push("The therapist will call you at the scheduled time");
-  } else if (appointment.session.type === "in_person") {
+  } else if (appointment.session.deliveryType === "in_person") {
     nextSteps.push("Please arrive 10 minutes early for your in-person session");
   }
 
@@ -437,7 +436,7 @@ export function generateBookingConfirmation(
       sessionType: appointment.session.type,
       therapist: therapistProfile.id, // Would use actual name from user profile
       location:
-        appointment.session.type === "in_person"
+        appointment.session.deliveryType === "in_person"
           ? "Therapist's office"
           : undefined,
     },

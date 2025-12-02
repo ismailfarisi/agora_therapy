@@ -1,5 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminAuth, getAdminFirestore } from "@/lib/firebase/admin";
+import { Timestamp } from "firebase-admin/firestore";
+
+interface AppointmentData {
+  id: string;
+  clientId: string;
+  scheduledFor: Timestamp | Date;
+  status: string;
+  payment?: {
+    amount: number;
+  };
+  [key: string]: unknown;
+}
+
+function toDate(value: Timestamp | Date | null | undefined): Date {
+  if (!value) return new Date();
+  if (value instanceof Date) return value;
+  return (value as Timestamp).toDate();
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -27,10 +45,10 @@ export async function GET(request: NextRequest) {
 
     // Get unique client IDs
     const clientIds = new Set<string>();
-    const appointmentsByClient = new Map<string, any[]>();
+    const appointmentsByClient = new Map<string, AppointmentData[]>();
 
     appointmentsSnapshot.docs.forEach((doc) => {
-      const appointment = { id: doc.id, ...doc.data() };
+      const appointment = { id: doc.id, ...doc.data() } as AppointmentData;
       const clientId = appointment.clientId;
       clientIds.add(clientId);
 
@@ -62,8 +80,8 @@ export async function GET(request: NextRequest) {
 
         // Get last appointment date
         const lastAppointment = completedAppointments.sort((a, b) => {
-          const dateA = a.scheduledFor?.toDate?.() || new Date(a.scheduledFor);
-          const dateB = b.scheduledFor?.toDate?.() || new Date(b.scheduledFor);
+          const dateA = toDate(a.scheduledFor);
+          const dateB = toDate(b.scheduledFor);
           return dateB.getTime() - dateA.getTime();
         })[0];
 
@@ -80,8 +98,8 @@ export async function GET(request: NextRequest) {
           lastAppointmentDate: lastAppointment?.scheduledFor || null,
           firstAppointmentDate:
             clientAppointments.sort((a, b) => {
-              const dateA = a.scheduledFor?.toDate?.() || new Date(a.scheduledFor);
-              const dateB = b.scheduledFor?.toDate?.() || new Date(b.scheduledFor);
+              const dateA = toDate(a.scheduledFor);
+              const dateB = toDate(b.scheduledFor);
               return dateA.getTime() - dateB.getTime();
             })[0]?.scheduledFor || null,
         };
@@ -90,8 +108,8 @@ export async function GET(request: NextRequest) {
 
     // Sort by last appointment date (most recent first)
     clients.sort((a, b) => {
-      const dateA = a.lastAppointmentDate?.toDate?.() || new Date(a.lastAppointmentDate);
-      const dateB = b.lastAppointmentDate?.toDate?.() || new Date(b.lastAppointmentDate);
+      const dateA = toDate(a.lastAppointmentDate as Timestamp | Date | null);
+      const dateB = toDate(b.lastAppointmentDate as Timestamp | Date | null);
       return dateB.getTime() - dateA.getTime();
     });
 

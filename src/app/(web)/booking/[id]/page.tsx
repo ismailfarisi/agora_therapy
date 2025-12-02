@@ -10,8 +10,8 @@ import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import CheckoutForm from '@/components/booking/CheckoutForm';
 import { useAuth } from '@/lib/hooks/useAuth';
+import CheckoutForm from '@/components/booking/CheckoutForm';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 

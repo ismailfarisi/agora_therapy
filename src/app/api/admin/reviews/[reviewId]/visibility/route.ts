@@ -8,8 +8,9 @@ import { FieldValue } from "firebase-admin/firestore";
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { reviewId: string } }
+  { params }: { params: Promise<{ reviewId: string }> }
 ) {
+  const { reviewId } = await params;
   try {
     // Verify admin authentication
     const token = request.cookies.get("auth-token")?.value;
@@ -27,7 +28,6 @@ export async function PATCH(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const reviewId = params.reviewId;
     const body = await request.json();
     const { isPublic } = body;
 

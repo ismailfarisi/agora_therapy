@@ -9,13 +9,11 @@ import {
   query,
   where,
   orderBy,
-  collection,
   doc,
   updateDoc,
   serverTimestamp,
   Timestamp,
   Unsubscribe,
-  DocumentSnapshot,
   QuerySnapshot,
   getDoc,
   getDocs,
@@ -27,7 +25,6 @@ import {
   Appointment,
   ScheduleOverride,
   User,
-  AppointmentStatus,
 } from "@/types/database";
 
 interface RealtimeEventData {

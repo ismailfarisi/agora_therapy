@@ -5,6 +5,9 @@ import Stripe from "stripe";
 import { emailService } from "@/lib/services/email-service";
 import { RtcTokenBuilder, RtcRole } from "agora-token";
 
+// Disable body parsing for Stripe webhooks
+export const runtime = 'nodejs';
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2025-07-30.basil",
 });
@@ -17,10 +20,17 @@ const AGORA_APP_CERTIFICATE = process.env.AGORA_APP_CERTIFICATE!;
 
 export async function POST(request: NextRequest) {
   try {
+    console.log("🔔 Stripe webhook received");
     const body = await request.text();
     const signature = request.headers.get("stripe-signature");
 
+    console.log("📝 Request details:");
+    console.log("- Body length:", body.length);
+    console.log("- Has signature:", !!signature);
+    console.log("- Webhook secret configured:", !!webhookSecret);
+
     if (!signature) {
+      console.error("❌ Missing stripe-signature header");
       return NextResponse.json(
         { error: "Missing stripe-signature header" },
         { status: 400 }
@@ -31,8 +41,12 @@ export async function POST(request: NextRequest) {
     let event: Stripe.Event;
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+      console.log("✅ Webhook signature verified");
+      console.log("📦 Event type:", event.type);
     } catch (err) {
-      console.error("Webhook signature verification failed:", err);
+      const error = err as Error;
+      console.error("❌ Webhook signature verification failed:", error.message);
+      console.error("Full error:", error);
       return NextResponse.json(
         { error: "Invalid signature" },
         { status: 400 }

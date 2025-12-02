@@ -4,7 +4,7 @@
  */
 
 import {
-  doc,
+
   getDoc,
   setDoc,
   updateDoc,
@@ -16,7 +16,6 @@ import {
   limit,
   Timestamp,
   serverTimestamp,
-  collection,
   getDocs,
   writeBatch,
 } from "firebase/firestore";
@@ -92,6 +91,7 @@ export class TherapistService {
         // Create new profile
         const newProfile: TherapistProfile = {
           id: therapistId,
+          services: [],
           credentials: {
             licenseNumber: "",
             licenseState: "",
@@ -173,7 +173,8 @@ export class TherapistService {
     const missingFields: string[] = [];
 
     requiredFields.forEach(({ section, field, minLength, min }) => {
-      const value = (profile as any)[section][field];
+      const profileSection = profile[section as keyof typeof profile] as Record<string, unknown>;
+      const value = profileSection?.[field];
       const fieldName = `${section}.${field}`;
 
       if (Array.isArray(value)) {
@@ -321,6 +322,7 @@ export class TherapistService {
         const newProfile: TherapistProfile = {
           id: therapistId,
           photoURL: photoURL,
+          services: [],
           credentials: {
             licenseNumber: "",
             licenseState: "",
@@ -533,6 +535,7 @@ export class TherapistService {
   ): TherapistProfile {
     return {
       id: therapistId,
+      services: [],
       credentials: {
         ...onboardingData.credentials,
         licenseExpiry: Timestamp.fromDate(

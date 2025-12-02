@@ -6,6 +6,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { Timestamp } from "firebase/firestore";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -108,14 +109,14 @@ export function ScheduleOverrides({
 
   const handleSubmit = () => {
     const overrideData = {
-      date: new Date(formData.date),
+      date: Timestamp.fromDate(new Date(formData.date)),
       type: formData.type,
       reason: formData.reason,
       affectedSlots:
         formData.type === "day_off" ? undefined : formData.affectedSlots,
       isRecurring: formData.isRecurring,
       recurringUntil: formData.recurringUntil
-        ? new Date(formData.recurringUntil)
+        ? Timestamp.fromDate(new Date(formData.recurringUntil))
         : undefined,
       metadata: {
         notes: formData.notes,

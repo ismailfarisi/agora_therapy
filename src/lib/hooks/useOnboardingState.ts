@@ -90,7 +90,7 @@ export function useOnboardingState(
   const updateTherapistCredentials = useCallback(
     (
       field: keyof NonNullable<OnboardingState["therapistProfile"]>["credentials"],
-      value: any
+      value: string | string[] | boolean | number
     ) => {
       setState((prev) => ({
         ...prev,
@@ -111,7 +111,7 @@ export function useOnboardingState(
   const updateTherapistPractice = useCallback(
     (
       field: keyof NonNullable<OnboardingState["therapistProfile"]>["practice"],
-      value: any
+      value: string | string[] | boolean | number
     ) => {
       setState((prev) => ({
         ...prev,
@@ -132,7 +132,7 @@ export function useOnboardingState(
   const updateTherapistAvailability = useCallback(
     (
       field: keyof NonNullable<OnboardingState["therapistProfile"]>["availability"],
-      value: any
+      value: number | string | { [dayOfWeek: number]: { start: string; end: string }[] }
     ) => {
       setState((prev) => ({
         ...prev,

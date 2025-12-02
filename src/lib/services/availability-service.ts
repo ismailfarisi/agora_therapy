@@ -4,8 +4,6 @@
  */
 
 import {
-  collection,
-  doc,
   getDocs,
   getDoc,
   addDoc,
@@ -17,17 +15,12 @@ import {
   onSnapshot,
   Timestamp,
   serverTimestamp,
-  and,
-  or,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase/client";
-import { collections, documents, generateId } from "@/lib/firebase/collections";
+import { collections, documents } from "@/lib/firebase/collections";
 import {
   TherapistAvailability,
   ScheduleOverride,
-  TimeSlot,
 } from "@/types/database";
-import { businessConfig } from "@/lib/config";
 import { TimeSlotService } from "./timeslot-service";
 
 export class AvailabilityService {
