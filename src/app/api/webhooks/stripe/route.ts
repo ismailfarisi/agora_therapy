@@ -143,17 +143,31 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
     const therapistProfileData = therapistProfileDoc.data();
 
     // Send confirmation emails
-    await emailService.sendAppointmentConfirmation({
-      clientName: clientData?.profile?.displayName || "Client",
-      clientEmail: clientData?.email || "",
-      therapistName: therapistData?.profile?.displayName || "Therapist",
-      therapistEmail: therapistData?.email || "",
-      appointmentDate: appointmentData.scheduledFor.toDate(),
-      duration: appointmentData.duration,
-      meetingLink,
-      amount: appointmentData.payment.amount,
-      currency: appointmentData.payment.currency,
-    });
+    console.log("📧 Preparing to send confirmation emails...");
+    console.log("Client Email:", clientData?.email);
+    console.log("Therapist Email:", therapistData?.email);
+    console.log("Meeting Link:", meetingLink);
+    console.log("🔍 ENV Check - SMTP_HOST:", process.env.SMTP_HOST);
+    console.log("🔍 ENV Check - SMTP_USER:", process.env.SMTP_USER);
+    console.log("🔍 ENV Check - Has SMTP_PASSWORD:", !!process.env.SMTP_PASSWORD);
+    
+    try {
+      await emailService.sendAppointmentConfirmation({
+        clientName: clientData?.profile?.displayName || "Client",
+        clientEmail: clientData?.email || "",
+        therapistName: therapistData?.profile?.displayName || "Therapist",
+        therapistEmail: therapistData?.email || "",
+        appointmentDate: appointmentData.scheduledFor.toDate(),
+        duration: appointmentData.duration,
+        meetingLink,
+        amount: appointmentData.payment.amount,
+        currency: appointmentData.payment.currency,
+      });
+      console.log("✅ Confirmation emails sent successfully!");
+    } catch (emailError) {
+      console.error("❌ Failed to send confirmation emails:", emailError);
+      // Don't throw - we still want to mark payment as successful
+    }
 
     console.log("Payment processed successfully for appointment:", appointmentDoc.id);
   } catch (error) {

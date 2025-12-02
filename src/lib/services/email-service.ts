@@ -47,7 +47,14 @@ class EmailService {
 
   private async sendEmail(config: EmailConfig): Promise<void> {
     try {
-      await this.transporter.sendMail({
+      console.log("🔧 SMTP Configuration:", {
+        host: process.env.SMTP_HOST,
+        port: process.env.SMTP_PORT,
+        user: process.env.SMTP_USER,
+        hasPassword: !!process.env.SMTP_PASSWORD,
+      });
+      
+      const info = await this.transporter.sendMail({
         from: `"Mindgood Therapy" <${process.env.SMTP_USER}>`,
         to: config.to,
         subject: config.subject,
@@ -55,10 +62,17 @@ class EmailService {
         html: config.html,
         attachments: config.attachments,
       });
-      console.log(`Email sent successfully to ${config.to}`);
+      
+      console.log(`✅ Email sent successfully to ${config.to}`);
+      console.log("Message ID:", info.messageId);
+      console.log("Response:", info.response);
     } catch (error) {
-      console.error('Error sending email:', error);
-      throw new Error('Failed to send email');
+      console.error('❌ Error sending email:', error);
+      console.error('Error details:', {
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+      });
+      throw new Error(`Failed to send email: ${(error as Error).message}`);
     }
   }
 
@@ -290,9 +304,24 @@ class EmailService {
   }
 
   async sendAppointmentConfirmation(data: AppointmentEmailData): Promise<void> {
+    console.log("📧 Starting sendAppointmentConfirmation...");
+    console.log("Email Data:", {
+      clientName: data.clientName,
+      clientEmail: data.clientEmail,
+      therapistName: data.therapistName,
+      therapistEmail: data.therapistEmail,
+      appointmentDate: data.appointmentDate,
+      duration: data.duration,
+      meetingLink: data.meetingLink,
+      amount: data.amount,
+      currency: data.currency,
+    });
+
     const calendarInvite = this.generateCalendarInvite(data);
+    console.log("📅 Calendar invite generated");
 
     // Send to client
+    console.log("📤 Sending email to client:", data.clientEmail);
     await this.sendEmail({
       to: data.clientEmail,
       subject: '✅ Your Therapy Appointment is Confirmed',
@@ -305,8 +334,10 @@ class EmailService {
         },
       ],
     });
+    console.log("✅ Client email sent successfully");
 
     // Send to therapist
+    console.log("📤 Sending email to therapist:", data.therapistEmail);
     await this.sendEmail({
       to: data.therapistEmail,
       subject: '📅 New Appointment Booked',
@@ -319,6 +350,8 @@ class EmailService {
         },
       ],
     });
+    console.log("✅ Therapist email sent successfully");
+    console.log("🎉 All confirmation emails sent!");
   }
 
   async sendAppointmentReminder(
