@@ -5,19 +5,12 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { FiArrowRight, FiSearch } from 'react-icons/fi';
 import { Service } from '@/types/models/service';
-
-interface TherapistCard {
-  id: string;
-  name: string;
-  image: string;
-  languages: string[];
-  specializations: string[];
-}
+import { TherapistPublicView } from '@/types/models/therapist';
 
 export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [filteredServices, setFilteredServices] = useState<Service[]>([]);
-  const [therapistsByService, setTherapistsByService] = useState<Record<string, TherapistCard[]>>({});
+  const [therapistsByService, setTherapistsByService] = useState<Record<string, TherapistPublicView[]>>({});
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
 

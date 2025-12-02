@@ -5,6 +5,7 @@ import { FiFilter, FiX } from 'react-icons/fi';
 
 interface PsychologistFiltersProps {
   onFilterChange: (filters: { specialization: string; language: string; minExperience: string }) => void;
+  initialFilters?: { specialization: string; language: string; minExperience: string };
 }
 
 // Common specializations - can be moved to a constants file later
@@ -34,12 +35,21 @@ const LANGUAGES = [
   'Portuguese',
 ];
 
-const PsychologistFilters: React.FC<PsychologistFiltersProps> = ({ onFilterChange }) => {
-  // State for filters
-  const [language, setLanguage] = useState('');
-  const [specialization, setSpecialization] = useState('');
-  const [minExperience, setMinExperience] = useState('');
+const PsychologistFilters: React.FC<PsychologistFiltersProps> = ({ onFilterChange, initialFilters }) => {
+  // State for filters - initialize with URL parameters if provided
+  const [language, setLanguage] = useState(initialFilters?.language || '');
+  const [specialization, setSpecialization] = useState(initialFilters?.specialization || '');
+  const [minExperience, setMinExperience] = useState(initialFilters?.minExperience || '');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // Update local state when initialFilters change (from URL)
+  React.useEffect(() => {
+    if (initialFilters) {
+      setLanguage(initialFilters.language || '');
+      setSpecialization(initialFilters.specialization || '');
+      setMinExperience(initialFilters.minExperience || '');
+    }
+  }, [initialFilters]);
   
   // Handle filter changes
   const handleLanguageChange = (value: string) => {

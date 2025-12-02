@@ -82,6 +82,26 @@ export interface TherapistSearchFilters {
 }
 
 /**
+ * Public-facing therapist data for client views
+ * Used in psychologists directory, search results, and public profiles
+ */
+export interface TherapistPublicView {
+  id: string;
+  name: string;
+  title: string;
+  image: string;
+  languages: string[];
+  specializations: string[];
+  experience: number;
+  bio: string;
+  hourlyRate: number;
+  rating?: number;
+  reviewCount?: number;
+  isVerified: boolean;
+  isFeatured?: boolean;
+}
+
+/**
  * Therapist data for admin views
  * Includes user profile and therapist profile with serialized dates
  */

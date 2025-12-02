@@ -1,52 +1,68 @@
-import { Metadata } from 'next';
+"use client";
+
+import { useState, useEffect } from 'react';
+import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { FiArrowLeft, FiStar, FiClock, FiBookOpen, FiAward } from 'react-icons/fi';
-import { getPsychologistById } from '@/lib/data/psychologists';
 import CalendlyEmbed from '@/components/booking/CalendlyEmbed';
+import { TherapistPublicView } from '@/types/models/therapist';
 
-interface PageProps {
-  params: Promise<{
-    id: string;
-  }>;
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}
+export default function PsychologistDetail() {
+  const params = useParams();
+  const id = params.id as string;
+  const [psychologist, setPsychologist] = useState<TherapistPublicView | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
+  useEffect(() => {
+    if (id) {
+      fetchTherapist();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
-
-// Generate metadata for SEO
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const id =  (await params).id;
-  const psychologist = getPsychologistById(id);
-  
-  if (!psychologist) {
-    return {
-      title: 'Psychologist Not Found - MindGood',
-      description: 'The requested psychologist profile could not be found.',
-    };
-  }
-
-  return {
-    title: `${psychologist.name} - ${psychologist.title} | MindGood`,
-    description: `Book a consultation with ${psychologist.name}, a ${psychologist.title} with ${psychologist.experience} years of experience. Specializing in ${psychologist.specializations.join(', ')}.`,
-    keywords: `${psychologist.name}, psychologist, mental health, ${psychologist.languages.map(l => l.name).join(', ')}, ${psychologist.specializations.join(', ')}`,
+  const fetchTherapist = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`/api/public/therapists/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setPsychologist(data);
+      } else {
+        setError(true);
+      }
+    } catch (error) {
+      console.error('Error fetching therapist:', error);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
   };
-}
 
-export default async function PsychologistDetail({ params, searchParams }: PageProps) {
-  const id =  (await params).id;
-  const psychologist = getPsychologistById(id);
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-16">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Loading therapist profile...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
-  if (!psychologist) {
+  if (error || !psychologist) {
     return (
       <div className="container mx-auto px-4 py-16 text-center">
-        <h1 className="text-3xl font-bold mb-4">Psychologist Not Found</h1>
-        <p className="mb-8">The psychologist you are looking for does not exist or has been removed.</p>
+        <h1 className="text-3xl font-bold mb-4 text-gray-900 dark:text-white">Therapist Not Found</h1>
+        <p className="mb-8 text-gray-700 dark:text-gray-300">The therapist you are looking for does not exist or has been removed.</p>
         <Link 
           href="/psychologists"
           className="inline-flex items-center px-6 py-3 rounded-full bg-gradient-to-r from-teal-500 to-blue-600 text-white font-medium hover:opacity-90 transition-opacity"
         >
-          <FiArrowLeft className="mr-2" /> Back to All Psychologists
+          <FiArrowLeft className="mr-2" /> Back to All Therapists
         </Link>
       </div>
     );
@@ -82,30 +98,32 @@ export default async function PsychologistDetail({ params, searchParams }: PageP
                 <p className="text-teal-600 dark:text-teal-400 text-lg mb-3">{psychologist.title}</p>
                 
                 {/* Rating */}
-                <div className="flex items-center mb-4">
-                  <div className="flex items-center text-yellow-500">
-                    {[...Array(5)].map((_, i) => (
-                      <FiStar 
-                        key={i} 
-                        className={`${i < Math.floor(psychologist.rating) ? 'fill-current' : ''}`} 
-                      />
-                    ))}
+                {psychologist.rating && (
+                  <div className="flex items-center mb-4">
+                    <div className="flex items-center text-yellow-500">
+                      {[...Array(5)].map((_, i) => (
+                        <FiStar 
+                          key={i} 
+                          className={`${i < Math.floor(psychologist.rating!) ? 'fill-current' : ''}`} 
+                        />
+                      ))}
+                    </div>
+                    <span className="ml-2 text-gray-700 dark:text-gray-300">
+                      {psychologist.rating.toFixed(1)} {psychologist.reviewCount && `(${psychologist.reviewCount} reviews)`}
+                    </span>
                   </div>
-                  <span className="ml-2 text-gray-700 dark:text-gray-300">
-                    {psychologist.rating} ({psychologist.reviewCount} reviews)
-                  </span>
-                </div>
+                )}
                 
                 {/* Languages */}
                 <div className="mb-4">
                   <h3 className="font-medium text-gray-900 dark:text-white mb-2">Languages</h3>
                   <div className="flex flex-wrap gap-2">
-                    {psychologist.languages.map((lang) => (
+                    {psychologist.languages.map((lang, idx) => (
                       <span 
-                        key={lang.code}
+                        key={idx}
                         className="text-sm px-3 py-1 bg-teal-100 dark:bg-teal-900/30 text-teal-800 dark:text-teal-300 rounded-full"
                       >
-                        {lang.name} ({lang.proficiency})
+                        {lang}
                       </span>
                     ))}
                   </div>
@@ -126,23 +144,14 @@ export default async function PsychologistDetail({ params, searchParams }: PageP
               </h2>
               <p className="text-gray-700 dark:text-gray-300 mb-6">{psychologist.bio}</p>
               
-              <h3 className="text-lg font-bold mb-3 text-gray-900 dark:text-white flex items-center">
-                <FiAward className="mr-2" /> Education & Credentials
-              </h3>
-              <ul className="list-disc pl-5 text-gray-700 dark:text-gray-300 mb-6">
-                {psychologist.education.map((edu, index) => (
-                  <li key={index} className="mb-1">{edu}</li>
-                ))}
-              </ul>
-              
               <h3 className="text-lg font-bold mb-3 text-gray-900 dark:text-white">Specializations</h3>
               <div className="flex flex-wrap gap-2">
-                {psychologist.specializations.map((spec) => (
+                {psychologist.specializations.map((spec, idx) => (
                   <span 
-                    key={spec}
+                    key={idx}
                     className="text-sm px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full"
                   >
-                    {spec.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                    {spec}
                   </span>
                 ))}
               </div>
@@ -158,9 +167,18 @@ export default async function PsychologistDetail({ params, searchParams }: PageP
               Select a convenient time slot for your consultation with {psychologist.name}.
             </p>
             
-            {/* Calendly Integration */}
-            <div className="h-[600px] border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
-              <CalendlyEmbed url={psychologist.calendlyLink} />
+            {/* Booking Info */}
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Hourly Rate</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+                ${(psychologist.hourlyRate / 100).toFixed(2)}/hr
+              </p>
+              <button className="w-full py-3 bg-gradient-to-r from-teal-500 to-blue-600 text-white rounded-md hover:opacity-90 transition-opacity">
+                Book Consultation
+              </button>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                Booking integration coming soon
+              </p>
             </div>
           </div>
         </div>

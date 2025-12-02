@@ -1,33 +1,34 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import PsychologistFilters from '@/components/psychologists/PsychologistFilters';
-
-interface Therapist {
-  id: string;
-  name: string;
-  title: string;
-  image: string;
-  languages: string[];
-  specializations: string[];
-  experience: number;
-  bio: string;
-  hourlyRate: number;
-  rating: number;
-  reviewCount: number;
-  isVerified: boolean;
-}
+import { TherapistPublicView } from '@/types/models/therapist';
 
 export default function PsychologistsPage() {
-  const [therapists, setTherapists] = useState<Therapist[]>([]);
+  const searchParams = useSearchParams();
+  const [therapists, setTherapists] = useState<TherapistPublicView[]>([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     specialization: '',
     language: '',
     minExperience: '',
   });
+
+  // Initialize filters from URL parameters
+  useEffect(() => {
+    const specializationParam = searchParams.get('specialization');
+    const languageParam = searchParams.get('language');
+    const minExperienceParam = searchParams.get('minExperience');
+
+    setFilters({
+      specialization: specializationParam || '',
+      language: languageParam || '',
+      minExperience: minExperienceParam || '',
+    });
+  }, [searchParams]);
 
   useEffect(() => {
     fetchTherapists();
@@ -68,6 +69,7 @@ export default function PsychologistsPage() {
           <div className="lg:col-span-1">
             <PsychologistFilters 
               onFilterChange={setFilters}
+              initialFilters={filters}
             />
           </div>
 
@@ -151,16 +153,18 @@ export default function PsychologistsPage() {
                       </div>
                       
                       <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center">
-                          <div className="flex items-center text-yellow-500">
-                            <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                              <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                            </svg>
+                        {therapist.rating && (
+                          <div className="flex items-center">
+                            <div className="flex items-center text-yellow-500">
+                              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                              </svg>
+                            </div>
+                            <span className="ml-1 text-sm text-gray-700 dark:text-gray-300">
+                              {therapist.rating.toFixed(1)}
+                            </span>
                           </div>
-                          <span className="ml-1 text-sm text-gray-700 dark:text-gray-300">
-                            {therapist.rating.toFixed(1)}
-                          </span>
-                        </div>
+                        )}
                         <span className="text-sm text-gray-700 dark:text-gray-300">
                           {therapist.experience} yrs exp
                         </span>

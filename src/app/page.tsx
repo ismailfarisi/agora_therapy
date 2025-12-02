@@ -4,42 +4,14 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { FiArrowRight } from "react-icons/fi";
-
-interface Language {
-  code: string;
-  name: string;
-  nativeName?: string;
-  region: string;
-}
-
-interface Service {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  isActive: boolean;
-}
-
-interface Therapist {
-  id: string;
-  name: string;
-  title: string;
-  image: string;
-  languages: string[];
-  specializations: string[];
-  experience: number;
-  bio: string;
-  hourlyRate: number;
-  rating: number;
-  reviewCount: number;
-  isVerified: boolean;
-  isFeatured: boolean;
-}
+import { Language } from '@/lib/constants/languages';
+import { Service } from '@/types/models/service';
+import { TherapistPublicView } from '@/types/models/therapist';
 
 export default function Home() {
   const [popularLanguages, setPopularLanguages] = useState<Language[]>([]);
   const [services, setServices] = useState<Service[]>([]);
-  const [featuredTherapists, setFeaturedTherapists] = useState<Therapist[]>([]);
+  const [featuredTherapists, setFeaturedTherapists] = useState<TherapistPublicView[]>([]);
   const [loading, setLoading] = useState(true);
   const [servicesLoading, setServicesLoading] = useState(true);
   const [therapistsLoading, setTherapistsLoading] = useState(true);
