@@ -57,6 +57,13 @@ export default function OnboardingPage() {
   };
 
   return (
-    <OnboardingWizard user={userData} onComplete={handleOnboardingComplete} />
+    <OnboardingWizard 
+      user={{
+        ...userData,
+        id: user.uid, // Add Firebase Auth UID
+        email: user.email || userData.email || "",
+      }} 
+      onComplete={handleOnboardingComplete} 
+    />
   );
 }
