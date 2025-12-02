@@ -40,7 +40,8 @@ export function TestBooking() {
       date: selectedDate,
       timeSlotId,
       duration: 60,
-      sessionType: "video" as const,
+      sessionType: "individual" as const,
+      deliveryType: "video" as const,
     };
 
     const result = await AppointmentService.createAppointment(bookingRequest);

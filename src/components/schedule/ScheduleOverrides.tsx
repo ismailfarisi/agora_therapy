@@ -108,7 +108,7 @@ export function ScheduleOverrides({
   };
 
   const handleSubmit = () => {
-    const overrideData = {
+    const overrideData: Partial<ScheduleOverride> = {
       date: Timestamp.fromDate(new Date(formData.date)),
       type: formData.type,
       reason: formData.reason,
@@ -118,10 +118,15 @@ export function ScheduleOverrides({
       recurringUntil: formData.recurringUntil
         ? Timestamp.fromDate(new Date(formData.recurringUntil))
         : undefined,
-      metadata: {
-        notes: formData.notes,
-      },
     };
+
+    // Add notes to metadata if provided
+    if (formData.notes) {
+      overrideData.metadata = {
+        ...overrideData.metadata,
+        notes: formData.notes,
+      } as ScheduleOverride['metadata'];
+    }
 
     if (editingOverride) {
       onUpdateOverride?.(editingOverride.id, overrideData);
