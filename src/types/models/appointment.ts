@@ -4,6 +4,7 @@
  */
 
 import { Timestamp, FieldValue } from "firebase/firestore";
+import type { PaymentStatus } from "./payment";
 
 export type AppointmentStatus =
   | "pending"
@@ -64,8 +65,6 @@ export interface Appointment {
     rescheduledFrom?: string; // previous appointment ID
   };
 }
-
-export type PaymentStatus = "pending" | "paid" | "refunded" | "failed";
 
 export interface BookingRequest {
   therapistId: string;

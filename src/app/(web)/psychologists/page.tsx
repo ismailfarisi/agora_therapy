@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import PsychologistFilters from '@/components/psychologists/PsychologistFilters';
 import { TherapistPublicView } from '@/types/models/therapist';
 
-export default function PsychologistsPage() {
+function PsychologistsContent() {
   const searchParams = useSearchParams();
   const [therapists, setTherapists] = useState<TherapistPublicView[]>([]);
   const [loading, setLoading] = useState(true);
@@ -191,5 +191,13 @@ export default function PsychologistsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function PsychologistsPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-500"></div></div>}>
+      <PsychologistsContent />
+    </Suspense>
   );
 }

@@ -18,7 +18,6 @@ const eslintConfig = [
       "prefer-const": "off",
       "@typescript-eslint/no-unused-vars": "off",
       "import/no-anonymous-default-export": "off",
-      "react-hooks/exhaustive-deps": "off",
       "jsx-a11y/alt-text": "warn",
     },
   },

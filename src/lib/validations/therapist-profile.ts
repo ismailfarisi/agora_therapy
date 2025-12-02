@@ -95,9 +95,7 @@ export const documentUploadSchema = z.object({
         ["image/jpeg", "image/png", "application/pdf"].includes(file.type),
       "Only JPEG, PNG, and PDF files are allowed"
     ),
-  documentType: z.enum(["license", "certification", "insurance", "other"], {
-    required_error: "Document type is required",
-  }),
+  documentType: z.enum(["license", "certification", "insurance", "other"]),
   description: z
     .string()
     .max(200, "Description must be less than 200 characters")

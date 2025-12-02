@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   Calendar,
   Clock,
@@ -32,7 +33,6 @@ import { TherapistLayout } from "@/components/therapist/TherapistLayout";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { AppointmentService } from "@/lib/services/appointment-service";
 import { UserProfileService } from "@/lib/services/user-profile-service";
-import { VideoSessionModal } from "@/components/video/VideoSessionModal";
 import type { Appointment, AppointmentStatus } from "@/types/database";
 import { Timestamp } from "firebase/firestore";
 
@@ -85,6 +85,7 @@ const statusConfig = {
 };
 
 export default function TherapistAppointmentsPage() {
+  const router = useRouter();
   const { user, userData, loading: authLoading } = useAuth();
   const [appointments, setAppointments] = useState<AppointmentWithClient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -93,17 +94,7 @@ export default function TherapistAppointmentsPage() {
     useState<AppointmentWithClient | null>(null);
   const [notes, setNotes] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
-  const [isStartingVideo, setIsStartingVideo] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [videoSessionModal, setVideoSessionModal] = useState<{
-    isOpen: boolean;
-    appointmentId: string;
-    appointmentTitle: string;
-  }>({
-    isOpen: false,
-    appointmentId: "",
-    appointmentTitle: "",
-  });
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -224,12 +215,8 @@ export default function TherapistAppointmentsPage() {
     if (!user?.uid || !appointment.id) return;
 
     try {
-      setVideoSessionModal({
-        isOpen: true,
-        appointmentId: appointment.id,
-        appointmentTitle: `Session with ${appointment.clientProfile?.firstName} ${appointment.clientProfile?.lastName}`,
-      });
-      setError(null);
+      // Navigate to the session page
+      router.push(`/session/${appointment.id}`);
     } catch (error) {
       console.error("Error starting video session:", error);
       setError("Unable to start video session. Please try again.");
@@ -439,11 +426,10 @@ export default function TherapistAppointmentsPage() {
                                 onClick={() =>
                                   handleStartVideoSession(appointment)
                                 }
-                                disabled={isStartingVideo}
                                 className="bg-green-600 hover:bg-green-700"
                               >
                                 <Video className="w-4 h-4 mr-2" />
-                                Start Session
+                                Join Session
                               </Button>
                             )}
 
@@ -581,24 +567,6 @@ export default function TherapistAppointmentsPage() {
             and camera/microphone access.
           </AlertDescription>
         </Alert>
-
-        {/* Video Session Modal */}
-        {videoSessionModal.isOpen && user && (
-          <VideoSessionModal
-            isOpen={videoSessionModal.isOpen}
-            onClose={() =>
-              setVideoSessionModal({
-                isOpen: false,
-                appointmentId: "",
-                appointmentTitle: "",
-              })
-            }
-            appointmentId={videoSessionModal.appointmentId}
-            userId={user.uid}
-            userRole="therapist"
-            appointmentTitle={videoSessionModal.appointmentTitle}
-          />
-        )}
     </TherapistLayout>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ClientLayout } from "@/components/client/ClientLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import { Appointment } from "@/types/database";
 import { useToast } from "@/lib/hooks/useToast";
 
 export default function SessionsPage() {
+  const router = useRouter();
   const { user } = useAuth();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,15 +84,8 @@ export default function SessionsPage() {
   };
 
   const handleJoinSession = (appointment: Appointment) => {
-    if (appointment.session?.joinUrl) {
-      window.open(appointment.session.joinUrl, "_blank");
-      toast.success("Joining Session", "Opening video session in new tab");
-    } else {
-      toast.error(
-        "Link Not Available",
-        "Session link is not available yet. Please check back closer to your appointment time."
-      );
-    }
+    // Navigate to the session page
+    router.push(`/session/${appointment.id}`);
   };
 
   const getSessionStatus = (appointment: Appointment) => {
