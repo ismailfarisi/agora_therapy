@@ -150,13 +150,13 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
   
   const [data, setData] = useState<OnboardingData>({
     basicInfo: {
-      firstName: user.profile.firstName || "",
-      lastName: user.profile.lastName || "",
-      displayName: user.profile.displayName || "",
-      phoneNumber: user.profile.phoneNumber || "",
-      timezone: user.profile.timezone || "UTC",
-      locale: user.profile.locale || "en", // Default to English language code
-      languages: user.profile.languages || ["en"], // Default to English
+      firstName: user.profile?.firstName || "",
+      lastName: user.profile?.lastName || "",
+      displayName: user.profile?.displayName || "",
+      phoneNumber: user.profile?.phoneNumber || "",
+      timezone: user.profile?.timezone || "UTC",
+      locale: user.profile?.locale || "en", // Default to English language code
+      languages: user.profile?.languages || ["en"], // Default to English
     },
     preferences: {
       notifications: user.preferences?.notifications || {
@@ -188,7 +188,7 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
           currency: "USD",
         },
         availability: {
-          timezone: user.profile.timezone || "UTC",
+          timezone: user.profile?.timezone || "UTC",
           bufferMinutes: 15,
           maxDailyHours: 8,
           advanceBookingDays: 30,

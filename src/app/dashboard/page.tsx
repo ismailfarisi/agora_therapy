@@ -19,6 +19,9 @@ export default function DashboardPage() {
         // Not logged in, redirect to login
         router.push("/login");
       } else if (userData) {
+        console.log("📊 Dashboard redirect - userData:", userData);
+        console.log("📊 Dashboard redirect - role:", userData.role);
+        
         // Redirect based on role
         switch (userData.role) {
           case "admin":
@@ -31,9 +34,19 @@ export default function DashboardPage() {
             router.push("/client");
             break;
           default:
-            // Unknown role, redirect to home
-            router.push("/");
+            // Unknown or missing role - check if user needs onboarding
+            console.warn("⚠️ User has no role defined, redirecting to onboarding");
+            router.push("/onboarding");
         }
+      } else if (user && !userData) {
+        // User exists but no userData yet - wait a bit longer or redirect to onboarding
+        console.log("⏳ User exists but userData not loaded yet");
+        setTimeout(() => {
+          if (!userData) {
+            console.warn("⚠️ userData still not loaded, redirecting to onboarding");
+            router.push("/onboarding");
+          }
+        }, 2000);
       }
     }
   }, [user, userData, loading, router]);
