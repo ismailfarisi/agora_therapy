@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { FiArrowRight } from 'react-icons/fi';
+import { FiArrowRight, FiSearch } from 'react-icons/fi';
 import { Service } from '@/types/models/service';
 
 interface TherapistCard {
@@ -16,8 +16,10 @@ interface TherapistCard {
 
 export default function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
+  const [filteredServices, setFilteredServices] = useState<Service[]>([]);
   const [therapistsByService, setTherapistsByService] = useState<Record<string, TherapistCard[]>>({});
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchServices();
@@ -30,6 +32,7 @@ export default function ServicesPage() {
         const data = await response.json();
         const activeServices = data.services.filter((s: Service) => s.detailedDescription || s.helpPoints);
         setServices(activeServices);
+        setFilteredServices(activeServices);
         
         // Fetch therapists for each service
         activeServices.forEach((service: Service) => {
@@ -43,6 +46,22 @@ export default function ServicesPage() {
     }
   };
 
+  // Filter services based on search query
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setFilteredServices(services);
+    } else {
+      const query = searchQuery.toLowerCase();
+      const filtered = services.filter((service) => 
+        service.name.toLowerCase().includes(query) ||
+        service.description.toLowerCase().includes(query) ||
+        service.detailedDescription?.toLowerCase().includes(query) ||
+        service.helpPoints?.some(point => point.toLowerCase().includes(query))
+      );
+      setFilteredServices(filtered);
+    }
+  }, [searchQuery, services]);
+
   const fetchTherapistsForService = async (serviceId: string) => {
     try {
       const response = await fetch(`/api/public/therapists?specialization=${serviceId}`);
@@ -50,7 +69,7 @@ export default function ServicesPage() {
         const data = await response.json();
         setTherapistsByService(prev => ({
           ...prev,
-          [serviceId]: data.therapists.slice(0, 3)
+          [serviceId]: data.therapists.slice(0, 6) // Get 6 therapists
         }));
       }
     } catch (error) {
@@ -61,22 +80,59 @@ export default function ServicesPage() {
     <div className="container mx-auto px-4 py-12">
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold mb-4 text-gray-900 dark:text-white">Our Services</h1>
-        <p className="text-lg text-gray-700 dark:text-gray-300 max-w-2xl mx-auto">
+        <p className="text-lg text-gray-700 dark:text-gray-300 max-w-2xl mx-auto mb-8">
           We provide specialized mental health support in multiple languages to address a variety of concerns.
         </p>
+        
+        {/* Search Bar */}
+        <div className="max-w-2xl mx-auto">
+          <div className="relative">
+            <FiSearch className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+            <input
+              type="text"
+              placeholder="Search services (e.g., anxiety, depression, couples therapy...)"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-12 pr-4 py-3 rounded-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          {searchQuery && (
+            <p className="mt-3 text-sm text-gray-600 dark:text-gray-400">
+              Found {filteredServices.length} service{filteredServices.length !== 1 ? 's' : ''}
+            </p>
+          )}
+        </div>
       </div>
 
       {loading ? (
         <div className="flex justify-center items-center py-20">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
         </div>
-      ) : services.length === 0 ? (
+      ) : filteredServices.length === 0 ? (
         <div className="text-center py-20">
-          <p className="text-gray-600 dark:text-gray-400 text-lg">No services available at the moment.</p>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">
+            {searchQuery ? `No services found for "${searchQuery}"` : 'No services available at the moment.'}
+          </p>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="mt-4 px-6 py-2 bg-teal-600 text-white rounded-full hover:bg-teal-700 transition-colors"
+            >
+              Clear Search
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-24">
-          {services.map((service, index) => {
+          {filteredServices.map((service, index) => {
             const relatedTherapists = therapistsByService[service.id] || [];
             
             return (
@@ -117,37 +173,33 @@ export default function ServicesPage() {
                   </div>
                   
                   <div className="relative">
-                    <div className="aspect-w-4 aspect-h-3 rounded-lg overflow-hidden shadow-lg bg-gradient-to-br from-teal-100 to-blue-100 dark:from-teal-900 dark:to-blue-900 flex items-center justify-center">
-                      <div className="text-center p-8">
-                        <div className="text-6xl mb-4">🧠</div>
-                        <p className="text-gray-600 dark:text-gray-300 font-medium">{service.name}</p>
-                      </div>
-                    </div>
-                    
-                    {/* Related Therapists */}
+                    {/* Related Therapists Grid */}
                     {relatedTherapists.length > 0 && (
                       <div className="mt-6">
-                        <h3 className="text-lg font-medium mb-3 text-gray-900 dark:text-white">
-                          Specialists in this area:
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="grid grid-cols-3 gap-0 rounded-lg overflow-hidden shadow-lg">
                           {relatedTherapists.map((therapist) => (
                             <Link 
                               key={therapist.id}
                               href={`/psychologists/${therapist.id}`}
-                              className="flex items-center gap-2 p-2 bg-white dark:bg-gray-900 rounded-md shadow-sm hover:shadow-md transition-shadow"
+                              className="relative aspect-square group overflow-hidden"
                             >
-                              <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-200 dark:bg-gray-700">
-                                <Image 
-                                  src={therapist.image} 
-                                  alt={therapist.name}
-                                  fill
-                                  className="object-cover"
-                                />
-                              </div>
-                              <div>
-                                <p className="text-sm font-medium text-gray-900 dark:text-white">{therapist.name}</p>
-                                <p className="text-xs text-teal-600 dark:text-teal-400">
+                              {/* Full Image Background */}
+                              <Image 
+                                src={therapist.image} 
+                                alt={therapist.name}
+                                fill
+                                className="object-cover transition-transform duration-300 group-hover:scale-110"
+                              />
+                              
+                              {/* Gradient Overlay */}
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                              
+                              {/* Text Overlay at Bottom */}
+                              <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
+                                <p className="font-semibold text-sm leading-tight mb-1">
+                                  {therapist.name}
+                                </p>
+                                <p className="text-xs opacity-90">
                                   {therapist.languages[0] || 'Multiple languages'}
                                 </p>
                               </div>
