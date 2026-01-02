@@ -6,7 +6,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { signUpWithEmail, signInWithGoogle } from "@/lib/firebase/auth";
@@ -21,20 +21,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Mail, Lock, Eye, EyeOff, User, Phone } from "lucide-react";
+import { Loader2, Mail, Lock, Eye, EyeOff, User, Phone, Users, Stethoscope, ArrowLeftRight } from "lucide-react";
 import type { UserRole } from "@/types/database";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
+  const roleFromUrl = searchParams.get('role') as UserRole | null;
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -43,13 +38,20 @@ export default function RegisterPage() {
     password: "",
     confirmPassword: "",
     phoneNumber: "",
-    role: "" as UserRole | "",
+    role: (roleFromUrl || "") as UserRole | "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [generalError, setGeneralError] = useState("");
+
+  // Set role from URL parameter
+  useEffect(() => {
+    if (roleFromUrl && (roleFromUrl === 'client' || roleFromUrl === 'therapist')) {
+      setFormData(prev => ({ ...prev, role: roleFromUrl }));
+    }
+  }, [roleFromUrl]);
 
   // Redirect if already authenticated - use useEffect to avoid render-time redirects
   useEffect(() => {
@@ -300,25 +302,99 @@ export default function RegisterPage() {
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="role">I am a...</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) => handleInputChange("role", value)}
-                disabled={loading}
-              >
-                <SelectTrigger className={errors.role ? "border-red-500" : ""}>
-                  <SelectValue placeholder="Select your role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="client">
-                    Client - Looking for therapy
-                  </SelectItem>
-                  <SelectItem value="therapist">
-                    Therapist - Providing therapy
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Role Indicator with Switcher */}
+            <div className="space-y-3">
+              <Label>Account Type</Label>
+              <div className={`p-4 rounded-lg border-2 ${
+                formData.role === 'client' 
+                  ? 'border-teal-500 bg-teal-50 dark:bg-teal-950' 
+                  : formData.role === 'therapist'
+                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-950'
+                  : 'border-gray-300 bg-gray-50 dark:bg-gray-900'
+              }`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    {formData.role === 'client' ? (
+                      <>
+                        <div className="w-12 h-12 rounded-full bg-teal-500 flex items-center justify-center">
+                          <Users className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-teal-700 dark:text-teal-300">Client Account</h3>
+                          <p className="text-sm text-teal-600 dark:text-teal-400">Looking for therapy</p>
+                        </div>
+                      </>
+                    ) : formData.role === 'therapist' ? (
+                      <>
+                        <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center">
+                          <Stethoscope className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-blue-700 dark:text-blue-300">Therapist Account</h3>
+                          <p className="text-sm text-blue-600 dark:text-blue-400">Providing therapy services</p>
+                        </div>
+                      </>
+                    ) : (
+                      <div>
+                        <h3 className="font-semibold text-gray-700 dark:text-gray-300">Select Account Type</h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Choose your role below</p>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {formData.role && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newRole = formData.role === 'client' ? 'therapist' : 'client';
+                        handleInputChange('role', newRole);
+                        router.push(`/register?role=${newRole}`);
+                      }}
+                      className="gap-2"
+                      disabled={loading}
+                    >
+                      <ArrowLeftRight className="h-4 w-4" />
+                      Switch to {formData.role === 'client' ? 'Therapist' : 'Client'}
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {!formData.role && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      handleInputChange('role', 'client');
+                      router.push('/register?role=client');
+                    }}
+                    className="h-auto py-4 flex-col gap-2 border-2 hover:border-teal-500 hover:bg-teal-50 dark:hover:bg-teal-950"
+                    disabled={loading}
+                  >
+                    <Users className="h-6 w-6 text-teal-500" />
+                    <span className="font-medium">Client</span>
+                    <span className="text-xs text-gray-500">Looking for therapy</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      handleInputChange('role', 'therapist');
+                      router.push('/register?role=therapist');
+                    }}
+                    className="h-auto py-4 flex-col gap-2 border-2 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-950"
+                    disabled={loading}
+                  >
+                    <Stethoscope className="h-6 w-6 text-blue-500" />
+                    <span className="font-medium">Therapist</span>
+                    <span className="text-xs text-gray-500">Providing therapy</span>
+                  </Button>
+                </div>
+              )}
+
               {errors.role && (
                 <p className="text-sm text-red-500">{errors.role}</p>
               )}

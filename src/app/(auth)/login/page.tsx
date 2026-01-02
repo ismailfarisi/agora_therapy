@@ -22,12 +22,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { Loader2, Mail, Lock, Eye, EyeOff, Users, Stethoscope } from "lucide-react";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
+  const roleFromUrl = searchParams.get('role') as 'client' | 'therapist' | null;
 
   const [formData, setFormData] = useState({
     email: "",
@@ -152,6 +153,39 @@ function LoginForm() {
           <CardDescription className="text-center">
             Sign in to your account to continue
           </CardDescription>
+          
+          {/* Role Indicator */}
+          {roleFromUrl && (
+            <div className={`mt-4 p-3 rounded-lg border-2 ${
+              roleFromUrl === 'client'
+                ? 'border-teal-500 bg-teal-50 dark:bg-teal-950'
+                : 'border-blue-500 bg-blue-50 dark:bg-blue-950'
+            }`}>
+              <div className="flex items-center gap-3 justify-center">
+                {roleFromUrl === 'client' ? (
+                  <>
+                    <div className="w-10 h-10 rounded-full bg-teal-500 flex items-center justify-center">
+                      <Users className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-teal-700 dark:text-teal-300">Client Login</p>
+                      <p className="text-xs text-teal-600 dark:text-teal-400">Looking for therapy</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
+                      <Stethoscope className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-blue-700 dark:text-blue-300">Therapist Login</p>
+                      <p className="text-xs text-blue-600 dark:text-blue-400">Providing therapy</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

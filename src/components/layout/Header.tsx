@@ -6,7 +6,10 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import LanguageSelector from '../language-selector/LanguageSelector';
 import { FiMenu, FiX } from 'react-icons/fi';
+import { LogIn, UserPlus } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { AuthDialog } from '@/components/auth/AuthDialog';
+import { Button } from '@/components/ui/button';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -101,19 +104,17 @@ const Header = () => {
               Dashboard
             </Link>
           ) : (
-            <Link
-              href="/login"
-              className="px-4 py-2 rounded-full border-2 border-teal-500 text-teal-500 font-medium text-sm hover:bg-teal-500 hover:text-white transition-all"
-            >
-              Login
-            </Link>
+            <AuthDialog>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 border-teal-500 text-teal-500 hover:bg-teal-500 hover:text-white"
+              >
+                <LogIn className="h-4 w-4" />
+                Sign In
+              </Button>
+            </AuthDialog>
           )}
-          <Link 
-            href="/psychologists" 
-            className="px-4 py-2 rounded-full bg-gradient-to-r from-teal-500 to-blue-600 text-white font-medium text-sm hover:opacity-90 transition-opacity"
-          >
-            Book Consultation
-          </Link>
         </div>
 
         {/* Mobile Menu Button */}
@@ -155,13 +156,15 @@ const Header = () => {
                   Dashboard
                 </Link>
               ) : (
-                <Link
-                  href="/login"
-                  className="px-4 py-2 rounded-full border-2 border-teal-500 text-teal-500 font-medium text-sm hover:bg-teal-500 hover:text-white transition-all text-center"
-                  onClick={() => setIsMenuOpen(false)}
-                >
-                  Login
-                </Link>
+                <AuthDialog onOpenChange={(open) => !open && setIsMenuOpen(false)}>
+                  <Button
+                    variant="outline"
+                    className="gap-2 border-teal-500 text-teal-500 hover:bg-teal-500 hover:text-white w-full"
+                  >
+                    <LogIn className="h-4 w-4" />
+                    Sign In
+                  </Button>
+                </AuthDialog>
               )}
               <Link 
                 href="/psychologists" 
