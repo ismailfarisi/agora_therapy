@@ -16,7 +16,7 @@ import {
   User,
   UserCredential,
 } from "firebase/auth";
-import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { auth, db } from "./client";
 import { documents } from "./collections";
 import type { User as AppUser, UserRole } from "@/types/database";
@@ -116,17 +116,11 @@ export async function signInWithEmail(
       password
     );
 
-    // Update last login time
+    // Update last login time using updateDoc to avoid overwriting other fields
     const userRef = documents.user(userCredential.user.uid);
-    await setDoc(
-      userRef,
-      {
-        metadata: {
-          lastLoginAt: serverTimestamp(),
-        },
-      },
-      { merge: true }
-    );
+    await updateDoc(userRef, {
+      "metadata.lastLoginAt": serverTimestamp(),
+    });
 
     return userCredential;
   } catch (error) {
@@ -226,30 +220,46 @@ export async function getCurrentUserData(): Promise<AppUser | null> {
   try {
     const user = auth.currentUser;
     console.log("🔍 getCurrentUserData - Auth current user:", user?.uid);
+    console.log("🔍 getCurrentUserData - Auth email:", user?.email);
     
     if (!user) {
       console.log("❌ getCurrentUserData - No current user");
       return null;
     }
 
-    const userDocRef = documents.user(user.uid);
+    // Use direct doc reference instead of helper
+    const userDocRef = doc(db, "users", user.uid);
+    console.log("🔍 getCurrentUserData - Document path:", userDocRef.path);
     console.log("🔍 getCurrentUserData - Fetching doc for user:", user.uid);
     
     const userDoc = await getDoc(userDocRef);
     console.log("🔍 getCurrentUserData - Doc exists:", userDoc.exists());
+    console.log("🔍 getCurrentUserData - Doc ID:", userDoc.id);
     
     if (!userDoc.exists()) {
-      console.log("❌ getCurrentUserData - User document does not exist");
+      console.log("❌ getCurrentUserData - User document does not exist in Firestore");
+      console.log("❌ getCurrentUserData - Expected path:", userDocRef.path);
       return null;
     }
 
-    const userData = userDoc.data() as AppUser;
-    console.log("✅ getCurrentUserData - User data:", JSON.stringify(userData, null, 2));
-    console.log("📞 getCurrentUserData - Phone number:", userData?.profile?.phoneNumber);
+    const rawData = userDoc.data();
+    console.log("📦 getCurrentUserData - Raw Firestore data:", JSON.stringify(rawData, null, 2));
+    console.log("📦 getCurrentUserData - Data keys:", Object.keys(rawData || {}));
+    console.log("📦 getCurrentUserData - Has role?", 'role' in (rawData || {}));
+    console.log("📦 getCurrentUserData - Has email?", 'email' in (rawData || {}));
+    console.log("📦 getCurrentUserData - Has profile?", 'profile' in (rawData || {}));
+    
+    const userData = rawData as AppUser;
+    console.log("✅ getCurrentUserData - Parsed userData role:", userData?.role);
+    console.log("✅ getCurrentUserData - Parsed userData email:", userData?.email);
+    console.log("✅ getCurrentUserData - Parsed userData profile:", userData?.profile);
+    console.log("✅ getCurrentUserData - Full userData:", JSON.stringify(userData, null, 2));
     
     return userData;
   } catch (error) {
     console.error("❌ Error getting current user data:", error);
+    console.error("❌ Error details:", error instanceof Error ? error.message : String(error));
+    console.error("❌ Error stack:", error instanceof Error ? error.stack : 'No stack trace');
     return null;
   }
 }

@@ -17,12 +17,22 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/lib/hooks/useAuth";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-const accountItems = [
+const generalItems = [
   {
-    name: "Settings",
-    href: "/client/settings",
-    icon: Settings,
+    name: "Dashboard",
+    href: "/client",
+    icon: LayoutDashboard,
   },
 ];
 
@@ -52,15 +62,24 @@ const billingItems = [
   },
 ];
 
+const accountItems = [
+  {
+    name: "Settings",
+    href: "/client/settings",
+    icon: Settings,
+  },
+];
+
 export function ClientSidebar() {
   const pathname = usePathname();
   const { user, userData, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   const handleSignOut = async () => {
     try {
       await signOut();
-      window.location.href = "/login";
+      window.location.href = "/";
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -108,6 +127,37 @@ export function ClientSidebar() {
 
           {/* Navigation */}
           <nav className="flex-1 overflow-y-auto py-6 px-4">
+            {/* General Section */}
+            <div className="mb-6">
+              <h3 className="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                General
+              </h3>
+              <ul className="space-y-1">
+                {generalItems.map((item) => {
+                  const isActive = pathname === item.href;
+                  const Icon = item.icon;
+
+                  return (
+                    <li key={item.name}>
+                      <Link
+                        href={item.href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className={cn(
+                          "flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                          isActive
+                            ? "bg-blue-100 text-teal-600"
+                            : "text-gray-700 hover:bg-blue-50"
+                        )}
+                      >
+                        <Icon className="h-4 w-4" />
+                        <span>{item.name}</span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
             {/* Therapy Section */}
             <div className="mb-6">
               <h3 className="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -205,7 +255,7 @@ export function ClientSidebar() {
           {/* Sign Out */}
           <div className="p-4 border-t border-blue-200">
             <button
-              onClick={handleSignOut}
+              onClick={() => setShowLogoutDialog(true)}
               className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-blue-50 w-full transition-colors"
             >
               <LogOut className="h-4 w-4" />
@@ -222,6 +272,27 @@ export function ClientSidebar() {
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will be redirected to the home page and will need to log in again to access your account.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSignOut}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Log out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

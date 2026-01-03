@@ -60,6 +60,7 @@ export interface OnboardingData {
     locale: string; // Primary language for UI
     languages: string[]; // All languages user speaks
     photoURL?: string;
+    gender?: "male" | "female" | "prefer-not-to-say";
   };
   preferences: {
     notifications: {
@@ -161,6 +162,7 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
       timezone: user.profile?.timezone || "UTC",
       locale: user.profile?.locale || "en", // Default to English language code
       languages: user.profile?.languages || ["en"], // Default to English
+      gender: user.profile?.gender,
     },
     preferences: {
       notifications: user.preferences?.notifications || {
@@ -205,29 +207,22 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
   const clientSteps: StepConfig[] = [
     {
       id: "basic-info",
-      title: "Basic Information",
-      description: "Tell us about yourself",
+      title: "Welcome! Let's Get Started",
+      description: "Share what feels comfortable - we're here for you",
       icon: UserIcon,
       required: true,
     },
     {
-      id: "photo",
-      title: "Profile Photo",
-      description: "Add your photo (optional)",
-      icon: Camera,
-      required: false,
-    },
-    {
       id: "preferences",
-      title: "Preferences",
-      description: "Set your preferences",
+      title: "Your Comfort Matters",
+      description: "Help us personalize your experience",
       icon: Bell,
       required: false,
     },
     {
       id: "complete",
-      title: "All Set!",
-      description: "Welcome to Mindgood",
+      title: "You're All Set! 🌟",
+      description: "Welcome to your safe space for healing",
       icon: CheckCircle,
       required: false,
     },
@@ -491,7 +486,6 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
     if (currentStepConfig.id === "basic-info" && currentStepConfig.required) {
       return !!(
         data.basicInfo.firstName &&
-        data.basicInfo.lastName &&
         data.basicInfo.displayName
       );
     }
@@ -531,7 +525,16 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
     switch (steps[currentStep].id) {
       case "basic-info":
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
+            {/* Warm Welcome Message */}
+            <div className="bg-gradient-to-r from-teal-50 to-blue-50 border border-teal-200 rounded-lg p-4">
+              <p className="text-sm text-gray-700 leading-relaxed">
+                <span className="text-lg">🌸</span> <strong>Welcome to your healing journey.</strong> We're so glad you're here. 
+                This is a safe, judgment-free space where your well-being comes first. Take your time filling this out - 
+                there's no rush, and you can always update your information later.
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First Name</Label>
@@ -541,9 +544,14 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
                   onChange={(e) => updateBasicInfo("firstName", e.target.value)}
                   placeholder="Enter your first name"
                 />
+                <p className="text-xs text-gray-500 italic">
+                  💭 Feel free to use any name you're comfortable with - it doesn't have to be your real name
+                </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="lastName">Last Name</Label>
+                <Label htmlFor="lastName">
+                  Last Name <span className="text-gray-400 text-xs font-normal">(Optional)</span>
+                </Label>
                 <Input
                   id="lastName"
                   value={data.basicInfo.lastName}
@@ -561,6 +569,9 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
                 onChange={(e) => updateBasicInfo("displayName", e.target.value)}
                 placeholder="How would you like to be addressed?"
               />
+              <p className="text-xs text-gray-500 italic">
+                ✨ This is how we'll greet you - choose what makes you feel most comfortable
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -572,6 +583,41 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
                 onChange={(e) => updateBasicInfo("phoneNumber", e.target.value)}
                 placeholder="+1 (555) 123-4567"
               />
+              <p className="text-xs text-gray-500 italic">
+                📱 Only if you'd like appointment reminders via text - completely optional
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="gender">Gender (Optional)</Label>
+              <Select
+                value={data.basicInfo.gender || ""}
+                onValueChange={(value) => updateBasicInfo("gender", value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select your gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
+                </SelectContent>
+              </Select>
+              {data.basicInfo.gender === "male" && (
+                <p className="text-xs text-teal-600 italic flex items-center gap-1">
+                  💙 We're here to support you on your journey to wellness
+                </p>
+              )}
+              {data.basicInfo.gender === "female" && (
+                <p className="text-xs text-pink-600 italic flex items-center gap-1">
+                  💗 Your mental health matters, and we're honored to be part of your journey
+                </p>
+              )}
+              {data.basicInfo.gender === "prefer-not-to-say" && (
+                <p className="text-xs text-purple-600 italic flex items-center gap-1">
+                  💜 Your privacy is important to us - we're here for you, no matter what
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -599,6 +645,9 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-gray-500 italic">
+                  🌍 Helps us schedule sessions at times that work best for you
+                </p>
               </div>
 
               <div className="space-y-2 md:col-span-2">
@@ -918,13 +967,21 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
       case "preferences":
         return (
           <div className="space-y-6">
+            {/* Warm Introduction */}
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-4">
+              <p className="text-sm text-gray-700 leading-relaxed">
+                <span className="text-lg">🌟</span> <strong>Your comfort is our priority.</strong> These settings help us 
+                communicate with you in ways that feel right for you. You're in control and can change these anytime.
+              </p>
+            </div>
+
             <div>
-              <h3 className="font-medium mb-4">
-                We&apos;ll set up your preferences later
+              <h3 className="font-medium mb-4 text-gray-800">
+                ✨ We&apos;ll set up your preferences later
               </h3>
-              <p className="text-gray-600">
-                You can customize your notification and privacy settings in your
-                profile after completing setup.
+              <p className="text-gray-600 leading-relaxed">
+                You can customize your notification and privacy settings in your profile after completing setup. 
+                Don't worry - we'll only send you important updates, and you have full control over what you receive.
               </p>
             </div>
           </div>
@@ -934,25 +991,38 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
         return (
           <div className="text-center space-y-6">
             <div>
-              <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">
-                Welcome to Mindgood!
+              <div className="relative">
+                <CheckCircle className="h-20 w-20 text-teal-500 mx-auto mb-4 animate-pulse" />
+                <span className="absolute top-0 left-1/2 -translate-x-1/2 text-3xl">🎉</span>
+              </div>
+              <h3 className="text-2xl font-semibold mb-3 bg-gradient-to-r from-teal-600 to-blue-600 bg-clip-text text-transparent">
+                You&apos;re All Set! Welcome Home 🌟
               </h3>
-              <p className="text-gray-600">
-                Your account is ready. You can now start exploring the platform.
+              <p className="text-gray-700 text-lg leading-relaxed max-w-md mx-auto">
+                We&apos;re honored to be part of your wellness journey. Remember, taking this step 
+                shows incredible courage and self-care.
               </p>
             </div>
 
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="font-medium text-blue-900 mb-2">
-                What&apos;s Next?
+            <div className="bg-gradient-to-r from-teal-50 to-blue-50 border border-teal-200 p-6 rounded-lg">
+              <h4 className="font-semibold text-teal-900 mb-3 text-lg">
+                💫 Your Next Steps
               </h4>
-              <ul className="text-sm text-blue-800 space-y-1">
+              <ul className="text-sm text-gray-700 space-y-3 text-left max-w-md mx-auto">
                 {user.role === "client" && (
                   <>
-                    <li>• Browse and connect with therapists</li>
-                    <li>• Book your first therapy session</li>
-                    <li>• Complete your profile for better matches</li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-teal-500 mt-0.5">✓</span>
+                      <span><strong>Find Your Therapist:</strong> Browse caring professionals who match your needs</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-teal-500 mt-0.5">✓</span>
+                      <span><strong>Book When Ready:</strong> Schedule your first session at a time that works for you</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-teal-500 mt-0.5">✓</span>
+                      <span><strong>Take Your Time:</strong> There&apos;s no rush - explore at your own pace</span>
+                    </li>
                   </>
                 )}
                 {user.role === "therapist" && (
@@ -980,34 +1050,46 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome to Mindgood
+    <div className="min-h-screen flex items-center justify-center p-4 relative">
+      <div className="w-full max-w-3xl relative z-10">
+        {/* Joyful Header with Sunshine Theme */}
+        <div className="text-center mb-8 animate-fade-in">
+          <div className="inline-block mb-4 relative">
+            <div className="text-7xl animate-bounce-slow">🌻</div>
+            <div className="absolute -top-2 -right-2 text-3xl animate-spin-slow">☀️</div>
+          </div>
+          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-amber-500 via-pink-500 to-purple-500 bg-clip-text text-transparent mb-3 animate-fade-in-up">
+            Welcome to Your Happy Place! 🌈
           </h1>
-          <p className="text-gray-600">
-            Let&apos;s set up your account in a few simple steps
+          <p className="text-lg text-gray-700 max-w-xl mx-auto leading-relaxed">
+            ✨ Let's create your personal garden of wellness together - one beautiful step at a time
           </p>
         </div>
 
-        {/* Progress */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-gray-700">
-              Step {currentStep + 1} of {steps.length}
+        {/* Vibrant Progress Bar */}
+        <div className="mb-8 bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 border-amber-200">
+          <div className="flex justify-between items-center mb-3">
+            <span className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+              <span className="text-xl">🌱</span>
+              Growing: Step {currentStep + 1} of {steps.length}
             </span>
-            <span className="text-sm font-medium text-gray-700">
-              {progress}% Complete
+            <span className="text-sm font-semibold bg-gradient-to-r from-amber-500 to-pink-500 bg-clip-text text-transparent">
+              {progress}% Blooming! 🌸
             </span>
           </div>
-          <Progress value={progress} className="h-2" />
+          <div className="relative h-3 bg-gradient-to-r from-gray-200 to-gray-100 rounded-full overflow-hidden">
+            <div 
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-amber-400 via-pink-400 to-purple-400 rounded-full transition-all duration-500 ease-out shadow-lg"
+              style={{ width: `${progress}%` }}
+            >
+              <div className="absolute inset-0 bg-white/30 animate-shimmer"></div>
+            </div>
+          </div>
         </div>
 
-        {/* Steps Navigation */}
+        {/* Joyful Steps Navigation */}
         <div className="flex justify-center mb-8">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             {steps.map((step, index) => {
               const Icon = step.icon;
               const isActive = index === currentStep;
@@ -1016,31 +1098,45 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
 
               return (
                 <div key={step.id} className="flex items-center">
-                  <button
-                    onClick={() => isAccessible && setCurrentStep(index)}
-                    disabled={!isAccessible}
-                    className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-colors ${
-                      isCompleted
-                        ? "bg-green-500 border-green-500 text-white"
-                        : isActive
-                        ? "bg-blue-500 border-blue-500 text-white"
-                        : isAccessible
-                        ? "border-gray-300 text-gray-500 hover:border-gray-400"
-                        : "border-gray-200 text-gray-300 cursor-not-allowed"
-                    }`}
-                  >
-                    {isCompleted ? (
-                      <CheckCircle className="h-5 w-5" />
-                    ) : (
-                      <Icon className="h-5 w-5" />
-                    )}
-                  </button>
-                  {index < steps.length - 1 && (
-                    <div
-                      className={`w-8 h-0.5 mx-2 ${
-                        isCompleted ? "bg-green-500" : "bg-gray-300"
+                  <div className="relative group">
+                    <button
+                      onClick={() => isAccessible && setCurrentStep(index)}
+                      disabled={!isAccessible}
+                      className={`flex items-center justify-center w-14 h-14 rounded-full border-3 transition-all duration-300 transform ${
+                        isCompleted
+                          ? "bg-gradient-to-br from-green-400 to-teal-400 border-green-300 text-white shadow-lg scale-100 hover:scale-110"
+                          : isActive
+                          ? "bg-gradient-to-br from-amber-400 via-pink-400 to-purple-400 border-pink-300 text-white shadow-xl scale-110 animate-pulse-soft"
+                          : isAccessible
+                          ? "border-gray-300 text-gray-400 hover:border-pink-300 hover:scale-105 bg-white"
+                          : "border-gray-200 text-gray-300 cursor-not-allowed bg-gray-50"
                       }`}
-                    />
+                    >
+                      {isCompleted ? (
+                        <div className="relative">
+                          <CheckCircle className="h-6 w-6" />
+                          <span className="absolute -top-1 -right-1 text-xs">✨</span>
+                        </div>
+                      ) : (
+                        <Icon className="h-6 w-6" />
+                      )}
+                    </button>
+                    {/* Tooltip */}
+                    <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                      <div className="bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                        {step.title}
+                      </div>
+                    </div>
+                  </div>
+                  {index < steps.length - 1 && (
+                    <div className="relative w-12 h-1 mx-1">
+                      <div className="absolute inset-0 bg-gray-200 rounded-full"></div>
+                      <div
+                        className={`absolute inset-0 rounded-full transition-all duration-500 ${
+                          isCompleted ? "bg-gradient-to-r from-green-400 to-teal-400 w-full" : "w-0"
+                        }`}
+                      />
+                    </div>
                   )}
                 </div>
               );
@@ -1048,38 +1144,43 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
           </div>
         </div>
 
-        {/* Main Content */}
-        <Card className="mb-8">
-          <CardHeader>
+        {/* Vibrant Main Content Card */}
+        <div className="mb-8 bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl border-2 border-white overflow-hidden transform transition-all duration-500 hover:shadow-3xl">
+          {/* Colorful Header Gradient */}
+          <div className="bg-gradient-to-r from-amber-100 via-pink-100 to-purple-100 border-b-2 border-pink-200 p-6">
             <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  {React.createElement(steps[currentStep].icon, {
-                    className: "h-5 w-5",
-                  })}
-                  {steps[currentStep].title}
-                </CardTitle>
-                <p className="text-gray-600 mt-1">
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-400 to-pink-400 flex items-center justify-center shadow-lg">
+                    {React.createElement(steps[currentStep].icon, {
+                      className: "h-6 w-6 text-white",
+                    })}
+                  </div>
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-800 to-gray-600 bg-clip-text text-transparent">
+                    {steps[currentStep].title}
+                  </h2>
+                </div>
+                <p className="text-gray-700 ml-15 text-sm leading-relaxed">
                   {steps[currentStep].description}
                 </p>
               </div>
               {steps[currentStep].required && (
-                <Badge variant="secondary">Required</Badge>
+                <Badge className="bg-gradient-to-r from-pink-500 to-purple-500 text-white border-0 shadow-md">✨ Required</Badge>
               )}
             </div>
-          </CardHeader>
-          <CardContent>{renderCurrentStep()}</CardContent>
-        </Card>
+          </div>
+          <div className="p-8">{renderCurrentStep()}</div>
+        </div>
 
-        {/* Navigation */}
-        <div className="flex justify-between">
+        {/* Joyful Navigation Buttons */}
+        <div className="flex justify-between gap-4">
           <Button
             variant="outline"
             onClick={handlePrevious}
             disabled={currentStep === 0}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 border-2 border-gray-300 hover:border-pink-400 hover:bg-pink-50 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed px-6 py-6 text-base font-semibold rounded-xl"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-5 w-5" />
             Previous
           </Button>
 
@@ -1087,19 +1188,28 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
             <Button
               onClick={handleFinishOnboarding}
               disabled={loading}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-gradient-to-r from-amber-500 via-pink-500 to-purple-500 hover:from-amber-600 hover:via-pink-600 hover:to-purple-600 text-white border-0 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 px-8 py-6 text-base font-bold rounded-xl"
             >
-              {loading ? "Finishing..." : "Get Started"}
-              <CheckCircle className="h-4 w-4" />
+              {loading ? (
+                <>
+                  <span className="animate-spin">🌟</span>
+                  Creating Your Garden...
+                </>
+              ) : (
+                <>
+                  Let's Bloom! 🌺
+                  <CheckCircle className="h-5 w-5" />
+                </>
+              )}
             </Button>
           ) : (
             <Button
               onClick={handleNext}
               disabled={!canGoNext()}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 bg-gradient-to-r from-teal-500 to-blue-500 hover:from-teal-600 hover:to-blue-600 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none px-8 py-6 text-base font-bold rounded-xl"
             >
-              Next
-              <ChevronRight className="h-4 w-4" />
+              Continue Growing 🌱
+              <ChevronRight className="h-5 w-5" />
             </Button>
           )}
         </div>

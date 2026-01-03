@@ -7,6 +7,7 @@ import { Timestamp, FieldValue } from "firebase/firestore";
 
 export type UserRole = "client" | "therapist" | "admin";
 export type UserStatus = "active" | "inactive" | "suspended";
+export type UserGender = "male" | "female" | "prefer-not-to-say";
 
 export interface User {
   id: string; // Firebase Auth UID
@@ -20,6 +21,7 @@ export interface User {
     timezone: string;
     locale: string; // Primary UI language
     languages?: string[]; // All languages user speaks (language codes)
+    gender?: UserGender;
   };
   role: UserRole;
   status: UserStatus;

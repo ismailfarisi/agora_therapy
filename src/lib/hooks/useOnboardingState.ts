@@ -15,6 +15,7 @@ export interface OnboardingState {
     timezone: string;
     locale: string;
     photoURL?: string;
+    gender?: "male" | "female" | "prefer-not-to-say";
   };
   preferences: {
     notifications: {

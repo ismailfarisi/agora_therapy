@@ -89,9 +89,9 @@ export function AuthDialog({ children, onOpenChange }: AuthDialogProps) {
 
       await signInWithEmail(signInData.email, signInData.password);
       handleOpenChange(false);
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 500);
+      router.push("/dashboard");
+      // Keep loading state active until navigation completes
+  
     } catch (err: any) {
       console.error("Sign in error:", err);
       if (err.message.includes("invalid-credential")) {
