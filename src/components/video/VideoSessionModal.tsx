@@ -18,6 +18,8 @@ interface VideoSessionModalProps {
   userId: string;
   userRole: "therapist" | "client";
   appointmentTitle?: string;
+  duration: number;
+  scheduledFor: Date;
 }
 
 export function VideoSessionModal({
@@ -27,6 +29,8 @@ export function VideoSessionModal({
   userId,
   userRole,
   appointmentTitle,
+  duration,
+  scheduledFor,
 }: VideoSessionModalProps) {
   const handleSessionEnd = () => {
     onClose();
@@ -58,6 +62,8 @@ export function VideoSessionModal({
             appointmentId={appointmentId}
             userId={userId}
             userRole={userRole}
+            duration={duration}
+            scheduledFor={scheduledFor}
             onSessionEnd={handleSessionEnd}
           />
         </div>
