@@ -79,39 +79,26 @@ export function AdminSidebar() {
   };
 
   return (
-    <div className="flex h-screen w-64 flex-col bg-white border-r border-gray-200">
-      {/* Logo */}
-      <div className="flex h-16 items-center border-b border-gray-200 px-6">
-        <Link href="/admin" className="flex items-center">
-          <Image
-            src="/Mindgood.png"
-            alt="MindGood"
-            width={140}
-            height={40}
-            className="object-contain"
-          />
-        </Link>
-      </div>
-
+    <div className="flex h-screen w-64 flex-col bg-gradient-to-b from-blue-50 to-cyan-50 border-r border-blue-200">
       {/* User Info */}
-      <div className="border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center justify-center w-10 h-10 bg-teal-100 rounded-full">
-            <span className="text-teal-600 font-semibold text-sm">
+      <div className="border-b border-blue-200 px-6 py-6">
+        <div className="flex flex-col items-center text-center space-y-3">
+          <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-teal-400 to-blue-500 rounded-full shadow-lg">
+            <span className="text-white font-bold text-2xl">
               {userData?.profile?.firstName?.charAt(0).toUpperCase() || "A"}
             </span>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
+          <div>
+            <p className="text-base font-semibold text-gray-900">
               {userData?.profile?.displayName || "Admin"}
             </p>
-            <p className="text-xs text-gray-500 truncate">Administrator</p>
+            <p className="text-xs text-gray-600 mt-1">Administrator</p>
           </div>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 overflow-y-auto px-4 py-6">
         <ul className="space-y-1">
           {menuItems.map((item) => {
             const isActive = pathname === item.href;
@@ -122,13 +109,13 @@ export function AdminSidebar() {
                 <Link
                   href={item.href}
                   className={cn(
-                    "flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                    "flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                     isActive
-                      ? "bg-teal-50 text-teal-700"
-                      : "text-gray-700 hover:bg-gray-100"
+                      ? "bg-white text-teal-600 shadow-sm"
+                      : "text-gray-700 hover:bg-blue-100/50"
                   )}
                 >
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-4 w-4" />
                   <span>{item.title}</span>
                 </Link>
               </li>
@@ -138,13 +125,13 @@ export function AdminSidebar() {
       </nav>
 
       {/* Sign Out */}
-      <div className="border-t border-gray-200 p-3">
+      <div className="border-t border-blue-200 p-4">
         <button
           onClick={handleSignOut}
-          className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors w-full"
+          className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700 hover:bg-blue-100/50 transition-all w-full"
         >
-          <LogOut className="h-5 w-5" />
-          <span>Sign Out</span>
+          <LogOut className="h-4 w-4" />
+          <span>Log out</span>
         </button>
       </div>
     </div>

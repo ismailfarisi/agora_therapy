@@ -83,125 +83,90 @@ export default function ClientDashboard() {
 
   return (
     <ClientLayout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Profile Header */}
-        <div className="mb-8">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-                {/* Avatar */}
-                <div className="w-24 h-24 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white font-bold text-4xl">
-                    {userData.profile?.firstName?.[0] || "C"}
-                    {userData.profile?.lastName?.[0] || ""}
-                  </span>
-                </div>
-
-                {/* Profile Info */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-3xl font-bold text-gray-900">
-                      {userData.profile?.firstName} {userData.profile?.lastName}
-                    </h1>
-                    <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                      Client
-                    </Badge>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <Mail className="h-4 w-4" />
-                      <span className="text-sm">{user.email}</span>
-                    </div>
-                    {userData.profile?.phoneNumber && (
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <Phone className="h-4 w-4" />
-                        <span className="text-sm">{userData.profile.phoneNumber}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Edit Button */}
-                <Link href="/client/settings">
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <Edit className="h-4 w-4" />
-                    Edit Profile
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="space-y-8">
+        {/* Welcome Section */}
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Welcome back, {userData.profile?.firstName}!</h1>
+          <p className="text-gray-600 mt-2">
+            Here's an overview of your therapy journey.
+          </p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card>
-            <CardContent className="pt-6">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="border border-blue-200/60 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Sessions</p>
+                  <p className="text-sm font-medium text-gray-500 mb-2">Total Sessions</p>
                   <p className="text-3xl font-bold text-gray-900">{appointments.length}</p>
                 </div>
-                <Video className="h-10 w-10 text-blue-500" />
+                <div className="w-14 h-14 bg-gradient-to-br from-teal-400 to-teal-600 rounded-xl flex items-center justify-center shadow-md">
+                  <Video className="h-7 w-7 text-white" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="border border-blue-200/60 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Completed</p>
+                  <p className="text-sm font-medium text-gray-500 mb-2">Completed</p>
                   <p className="text-3xl font-bold text-gray-900">{completedSessions}</p>
                 </div>
-                <CheckCircle className="h-10 w-10 text-green-500" />
+                <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center shadow-md">
+                  <CheckCircle className="h-7 w-7 text-white" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="border border-blue-200/60 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Upcoming</p>
+                  <p className="text-sm font-medium text-gray-500 mb-2">Upcoming</p>
                   <p className="text-3xl font-bold text-gray-900">{upcomingAppointments.length}</p>
                 </div>
-                <Calendar className="h-10 w-10 text-orange-500" />
+                <div className="w-14 h-14 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center shadow-md">
+                  <Calendar className="h-7 w-7 text-white" />
+                </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="pt-6">
+          <Card className="border border-blue-200/60 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Member Since</p>
-                  <p className="text-xl font-bold text-gray-900">
+                  <p className="text-sm font-medium text-gray-500 mb-2">Member Since</p>
+                  <p className="text-2xl font-bold text-gray-900">
                     {userData.metadata?.createdAt ? new Date(userData.metadata.createdAt as unknown as Date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A'}
                   </p>
                 </div>
-                <User className="h-10 w-10 text-purple-500" />
+                <div className="w-14 h-14 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl flex items-center justify-center shadow-md">
+                  <User className="h-7 w-7 text-white" />
+                </div>
               </div>
             </CardContent>
           </Card>
-
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Upcoming Appointments */}
           <div className="lg:col-span-2">
-            <Card>
+            <Card className="border border-blue-200/60 bg-white shadow-sm">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Upcoming Appointments</CardTitle>
-                    <CardDescription>
+                    <CardTitle className="text-lg">Upcoming Appointments</CardTitle>
+                    <CardDescription className="text-sm">
                       Your scheduled therapy sessions
                     </CardDescription>
                   </div>
                   <Link href="/client/appointments">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="border-blue-300 hover:bg-blue-50">
                       View All
                     </Button>
                   </Link>
@@ -213,15 +178,15 @@ export default function ClientDashboard() {
                     <LoadingSpinner size="lg" />
                   </div>
                 ) : upcomingAppointments.length > 0 ? (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
                     {upcomingAppointments.slice(0, 3).map((apt) => {
                       const timestamp = apt.scheduledFor as any;
                       const date = timestamp?.toDate?.() || new Date(timestamp);
                       return (
-                        <div key={apt.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
+                        <div key={apt.id} className="flex items-center justify-between p-4 border border-blue-200 rounded-lg hover:bg-blue-50/50 transition-colors">
                           <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                              <Video className="h-6 w-6 text-blue-600" />
+                            <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center">
+                              <Video className="h-6 w-6 text-teal-600" />
                             </div>
                             <div>
                               <p className="font-medium text-gray-900">
@@ -233,7 +198,7 @@ export default function ClientDashboard() {
                             </div>
                           </div>
                           <Link href="/client/appointments">
-                            <Button size="sm">View Details</Button>
+                            <Button size="sm" className="bg-teal-500 hover:bg-teal-600">View Details</Button>
                           </Link>
                         </div>
                       );
@@ -249,7 +214,7 @@ export default function ClientDashboard() {
                       Book your first therapy session to get started
                     </p>
                     <Link href="/client/therapists">
-                      <Button>Find a Therapist</Button>
+                      <Button className="bg-teal-500 hover:bg-teal-600">Find a Therapist</Button>
                     </Link>
                   </div>
                 )}
@@ -258,27 +223,27 @@ export default function ClientDashboard() {
           </div>
 
           {/* Quick Actions */}
-          <div className="space-y-6">
-            <Card>
+          <div className="space-y-4">
+            <Card className="border border-blue-200/60 bg-white shadow-sm">
               <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-                <CardDescription>Common tasks</CardDescription>
+                <CardTitle className="text-lg">Quick Actions</CardTitle>
+                <CardDescription className="text-sm">Common tasks</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-2">
                 <Link href="/client/therapists" className="block">
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button variant="outline" className="w-full justify-start border-blue-300 hover:bg-blue-50">
                     <User className="mr-2 h-4 w-4" />
                     Browse Therapists
                   </Button>
                 </Link>
                 <Link href="/client/appointments" className="block">
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button variant="outline" className="w-full justify-start border-blue-300 hover:bg-blue-50">
                     <Calendar className="mr-2 h-4 w-4" />
                     My Appointments
                   </Button>
                 </Link>
                 <Link href="/client/invoices" className="block">
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button variant="outline" className="w-full justify-start border-blue-300 hover:bg-blue-50">
                     <FileText className="mr-2 h-4 w-4" />
                     View Invoices
                   </Button>
@@ -286,17 +251,29 @@ export default function ClientDashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border border-blue-200/60 bg-white shadow-sm">
               <CardHeader>
-                <CardTitle>Therapy Tips</CardTitle>
-                <CardDescription>For a better session</CardDescription>
+                <CardTitle className="text-lg">Therapy Tips</CardTitle>
+                <CardDescription className="text-sm">For a better session</CardDescription>
               </CardHeader>
               <CardContent>
-                <ul className="text-sm space-y-2 text-gray-600">
-                  <li>• Choose a quiet, private space</li>
-                  <li>• Test your camera and microphone</li>
-                  <li>• Prepare topics to discuss</li>
-                  <li>• Stay hydrated</li>
+                <ul className="text-sm space-y-2.5 text-gray-700">
+                  <li className="flex items-start gap-2">
+                    <span className="text-teal-500 mt-0.5">•</span>
+                    <span>Choose a quiet, private space</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-teal-500 mt-0.5">•</span>
+                    <span>Test your camera and microphone</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-teal-500 mt-0.5">•</span>
+                    <span>Prepare topics to discuss</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-teal-500 mt-0.5">•</span>
+                    <span>Stay hydrated</span>
+                  </li>
                 </ul>
               </CardContent>
             </Card>

@@ -134,6 +134,8 @@ export function AuthDialog({ children, onOpenChange }: AuthDialogProps) {
         return;
       }
 
+      console.log("🔐 AuthDialog - Signing up with role:", signUpData.role);
+      
       await signUpWithEmail(signUpData.email, signUpData.password, {
         firstName: signUpData.firstName,
         lastName: signUpData.lastName,
@@ -141,6 +143,7 @@ export function AuthDialog({ children, onOpenChange }: AuthDialogProps) {
         phoneNumber: signUpData.phoneNumber,
       });
 
+      console.log("✅ AuthDialog - Signup successful, redirecting to onboarding");
       handleOpenChange(false);
       setTimeout(() => {
         router.push("/onboarding");
@@ -160,13 +163,14 @@ export function AuthDialog({ children, onOpenChange }: AuthDialogProps) {
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent className="w-[400px] p-0" align="end">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="signin">Sign In</TabsTrigger>
-            <TabsTrigger value="signup">Sign Up</TabsTrigger>
-          </TabsList>
+        <div className="max-h-[85vh] overflow-y-auto">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+            <TabsList className="grid w-full grid-cols-2 sticky top-0 z-10 bg-white dark:bg-gray-950">
+              <TabsTrigger value="signin">Sign In</TabsTrigger>
+              <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="signin" className="p-4 space-y-4">
+            <TabsContent value="signin" className="p-4 space-y-4">
             <div className="space-y-2">
               <h3 className="font-semibold text-lg">Welcome back</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -517,6 +521,7 @@ export function AuthDialog({ children, onOpenChange }: AuthDialogProps) {
             )}
           </TabsContent>
         </Tabs>
+        </div>
       </PopoverContent>
     </Popover>
   );

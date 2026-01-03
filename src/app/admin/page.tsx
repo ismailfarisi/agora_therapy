@@ -51,101 +51,111 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-8 max-w-7xl mx-auto">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-gray-600 mt-2">
             Monitor and manage the Mindgood platform.
           </p>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+          <Card className="border-blue-200 bg-white/80 backdrop-blur hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-gray-600">Total Users</CardTitle>
+              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                <Users className="h-5 w-5 text-blue-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">
+              <div className="text-3xl font-bold text-gray-900">
                 {statsLoading ? '...' : stats?.users.total || 0}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-gray-600 mt-1">
                 {stats?.users.newThisMonth || 0} new this month
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-blue-200 bg-white/80 backdrop-blur hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium text-gray-600">
                 Active Therapists
               </CardTitle>
-              <Shield className="h-4 w-4 text-muted-foreground" />
+              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                <Shield className="h-5 w-5 text-green-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-3xl font-bold text-gray-900">
                 {statsLoading ? '...' : stats?.therapists.verified || 0}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-gray-600 mt-1">
                 {stats?.therapists.pending || 0} pending verification
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-blue-200 bg-white/80 backdrop-blur hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium text-gray-600">
                 Sessions Today
               </CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-orange-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">
+              <div className="text-3xl font-bold text-gray-900">
                 {statsLoading ? '...' : stats?.appointments.todayCount || 0}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-gray-600 mt-1">
                 {stats?.appointments.upcoming || 0} upcoming total
               </p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-blue-200 bg-white/80 backdrop-blur hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="text-sm font-medium text-gray-600">
                 Platform Revenue
               </CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-purple-600" />
+              </div>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-600">
+              <div className="text-3xl font-bold text-gray-900">
                 {statsLoading ? '...' : `$${stats?.revenue.thisMonth.toFixed(2) || '0.00'}`}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-gray-600 mt-1">
                 ${stats?.revenue.total.toFixed(2) || '0.00'} total
               </p>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           {/* Recent Activity */}
           <div className="lg:col-span-2">
-            <Card>
+            <Card className="border-blue-200 bg-white/80 backdrop-blur">
               <CardHeader>
-                <CardTitle>Recent Platform Activity</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-lg">Recent Platform Activity</CardTitle>
+                <CardDescription className="text-sm">
                   Latest user registrations and system events
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-12">
-                  <TrendingUp className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <TrendingUp className="h-8 w-8 text-blue-600" />
+                  </div>
                   <h3 className="text-lg font-medium text-gray-900 mb-2">
                     No recent activity
                   </h3>
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 text-sm">
                     System activity and user events will appear here.
                   </p>
                 </div>
@@ -154,35 +164,35 @@ export default function AdminDashboard() {
           </div>
 
           {/* System Status & Alerts */}
-          <div className="space-y-6">
-            <Card>
+          <div className="space-y-4">
+            <Card className="border-blue-200 bg-white/80 backdrop-blur">
               <CardHeader>
-                <CardTitle>System Status</CardTitle>
-                <CardDescription>Platform health and alerts</CardDescription>
+                <CardTitle className="text-lg">System Status</CardTitle>
+                <CardDescription className="text-sm">Platform health and alerts</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Database</span>
-                    <span className="text-sm text-green-600 font-medium">
+                  <div className="flex items-center justify-between p-2 rounded-lg hover:bg-blue-50 transition-colors">
+                    <span className="text-sm font-medium">Database</span>
+                    <span className="text-sm text-green-600 font-semibold">
                       Healthy
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Authentication</span>
-                    <span className="text-sm text-green-600 font-medium">
+                  <div className="flex items-center justify-between p-2 rounded-lg hover:bg-blue-50 transition-colors">
+                    <span className="text-sm font-medium">Authentication</span>
+                    <span className="text-sm text-green-600 font-semibold">
                       Operational
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Video Service</span>
-                    <span className="text-sm text-green-600 font-medium">
+                  <div className="flex items-center justify-between p-2 rounded-lg hover:bg-blue-50 transition-colors">
+                    <span className="text-sm font-medium">Video Service</span>
+                    <span className="text-sm text-green-600 font-semibold">
                       Online
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Payment System</span>
-                    <span className="text-sm text-green-600 font-medium">
+                  <div className="flex items-center justify-between p-2 rounded-lg hover:bg-blue-50 transition-colors">
+                    <span className="text-sm font-medium">Payment System</span>
+                    <span className="text-sm text-green-600 font-semibold">
                       Active
                     </span>
                   </div>
@@ -190,16 +200,18 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border-blue-200 bg-white/80 backdrop-blur">
               <CardHeader>
-                <CardTitle>Pending Actions</CardTitle>
-                <CardDescription>
+                <CardTitle className="text-lg">Pending Actions</CardTitle>
+                <CardDescription className="text-sm">
                   Items requiring admin attention
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-8">
-                  <AlertTriangle className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <AlertTriangle className="h-6 w-6 text-gray-400" />
+                  </div>
                   <p className="text-sm text-gray-600">No pending actions</p>
                 </div>
               </CardContent>

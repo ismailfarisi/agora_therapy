@@ -148,6 +148,10 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
   const [certificateURLs, setCertificateURLs] = useState<string[]>([]);
   const isTherapist = user.role === "therapist";
   
+  console.log("🎯 OnboardingWizard - User role:", user.role);
+  console.log("🎯 OnboardingWizard - isTherapist:", isTherapist);
+  console.log("🎯 OnboardingWizard - User data:", JSON.stringify(user, null, 2));
+  
   const [data, setData] = useState<OnboardingData>({
     basicInfo: {
       firstName: user.profile?.firstName || "",

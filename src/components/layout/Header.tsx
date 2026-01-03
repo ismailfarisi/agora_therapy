@@ -99,7 +99,11 @@ const Header = () => {
           {user ? (
             <Link
               href={getDashboardLink()}
-              className="px-4 py-2 rounded-full border-2 border-teal-500 text-teal-500 font-medium text-sm hover:bg-teal-500 hover:text-white transition-all"
+              className={`px-4 py-2 rounded-full border-2 font-medium text-sm transition-all ${
+                pathname.startsWith('/client') || pathname.startsWith('/therapist') || pathname.startsWith('/admin')
+                  ? 'bg-teal-500 text-white border-teal-500'
+                  : 'border-teal-500 text-teal-500 hover:bg-teal-500 hover:text-white'
+              }`}
             >
               Dashboard
             </Link>
@@ -150,7 +154,11 @@ const Header = () => {
               {user ? (
                 <Link
                   href={getDashboardLink()}
-                  className="px-4 py-2 rounded-full border-2 border-teal-500 text-teal-500 font-medium text-sm hover:bg-teal-500 hover:text-white transition-all text-center"
+                  className={`px-4 py-2 rounded-full border-2 font-medium text-sm transition-all text-center ${
+                    pathname.startsWith('/client') || pathname.startsWith('/therapist') || pathname.startsWith('/admin')
+                      ? 'bg-teal-500 text-white border-teal-500'
+                      : 'border-teal-500 text-teal-500 hover:bg-teal-500 hover:text-white'
+                  }`}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Dashboard

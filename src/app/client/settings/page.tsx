@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 import { 
   User, 
   Bell, 
@@ -94,43 +94,31 @@ export default function SettingsPage() {
 
   return (
     <ClientLayout>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
-        <p className="text-lg text-gray-600">
-          Manage your account settings and preferences
-        </p>
-      </div>
+      <div className="space-y-8">
+        {/* Header */}
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+          <p className="text-gray-600 mt-2">
+            Manage your account settings and preferences
+          </p>
+        </div>
 
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="profile">
-            <User className="h-4 w-4 mr-2" />
-            Profile
-          </TabsTrigger>
-          <TabsTrigger value="notifications">
-            <Bell className="h-4 w-4 mr-2" />
-            Notifications
-          </TabsTrigger>
-          <TabsTrigger value="security">
-            <Lock className="h-4 w-4 mr-2" />
-            Security
-          </TabsTrigger>
-          <TabsTrigger value="billing">
-            <CreditCard className="h-4 w-4 mr-2" />
-            Billing
-          </TabsTrigger>
-        </TabsList>
+        {/* Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Profile Section */}
+          <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <User className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Personal Information</h2>
+              <p className="text-sm text-gray-600">Update your personal details and profile information</p>
+            </div>
+          </div>
 
-        {/* Profile Tab */}
-        <TabsContent value="profile" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
-              <CardDescription>
-                Update your personal details and profile information
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <Card className="border-blue-200 bg-white/80 backdrop-blur">
+            <CardContent className="pt-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="firstName">First Name</Label>
@@ -182,24 +170,28 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <Button onClick={handleSaveProfile} disabled={loading}>
+              <Button onClick={handleSaveProfile} disabled={loading} className="bg-teal-500 hover:bg-teal-600">
                 <Save className="h-4 w-4 mr-2" />
                 {loading ? "Saving..." : "Save Changes"}
               </Button>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
 
-        {/* Notifications Tab */}
-        <TabsContent value="notifications" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Preferences</CardTitle>
-              <CardDescription>
-                Choose how you want to receive notifications
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+        {/* Notifications Section */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <Bell className="h-5 w-5 text-green-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Notification Preferences</h2>
+              <p className="text-sm text-gray-600">Choose how you want to receive notifications</p>
+            </div>
+          </div>
+
+          <Card className="border-blue-200 bg-white/80 backdrop-blur">
+            <CardContent className="pt-6 space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
                   <Label>Email Notifications</Label>
@@ -252,24 +244,28 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <Button onClick={handleSaveNotifications} disabled={loading}>
+              <Button onClick={handleSaveNotifications} disabled={loading} className="bg-teal-500 hover:bg-teal-600">
                 <Save className="h-4 w-4 mr-2" />
                 {loading ? "Saving..." : "Save Preferences"}
               </Button>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
 
-        {/* Security Tab */}
-        <TabsContent value="security" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Password</CardTitle>
-              <CardDescription>
-                Manage your password and security settings
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+        {/* Security Section */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+              <Lock className="h-5 w-5 text-orange-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Security</h2>
+              <p className="text-sm text-gray-600">Manage your password and security settings</p>
+            </div>
+          </div>
+
+          <Card className="border-blue-200 bg-white/80 backdrop-blur">
+            <CardContent className="pt-6 space-y-4">
               <div className="space-y-2">
                 <Label>Current Password</Label>
                 <p className="text-sm text-gray-600">
@@ -277,50 +273,26 @@ export default function SettingsPage() {
                 </p>
               </div>
 
-              <Button onClick={handleChangePassword} variant="outline">
+              <Button onClick={handleChangePassword} variant="outline" className="border-blue-300 hover:bg-blue-50">
                 <Lock className="h-4 w-4 mr-2" />
                 Change Password
               </Button>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Two-Factor Authentication</CardTitle>
-              <CardDescription>
-                Add an extra layer of security to your account
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Enable 2FA</Label>
-                  <p className="text-sm text-gray-600">
-                    Require a verification code when signing in
-                  </p>
-                </div>
-                <Switch />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Active Sessions</CardTitle>
-              <CardDescription>
-                Manage your active sessions across devices
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
+          <Card className="border-blue-200 bg-white/80 backdrop-blur">
+            <CardContent className="pt-6">
               <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
+                <h3 className="font-medium text-gray-900">Active Sessions</h3>
+                <p className="text-sm text-gray-600">Manage your active sessions across devices</p>
+                <div className="flex items-center justify-between p-4 border border-blue-200 rounded-lg">
                   <div>
                     <p className="font-medium">Current Session</p>
                     <p className="text-sm text-gray-600">
                       Chrome on macOS • Active now
                     </p>
                   </div>
-                  <Badge variant="secondary">Current</Badge>
+                  <Badge variant="secondary" className="bg-teal-100 text-teal-800">Current</Badge>
                 </div>
                 <Button variant="destructive" size="sm">
                   Sign Out All Other Sessions
@@ -328,55 +300,33 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        </div>
 
-        {/* Billing Tab */}
-        <TabsContent value="billing" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment Methods</CardTitle>
-              <CardDescription>
-                Manage your payment methods and billing information
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-3">
-                    <CreditCard className="h-8 w-8 text-gray-600" />
-                    <div>
-                      <p className="font-medium">•••• •••• •••• 4242</p>
-                      <p className="text-sm text-gray-600">Expires 12/24</p>
-                    </div>
-                  </div>
-                  <Badge>Default</Badge>
-                </div>
-              </div>
+        {/* Billing Section */}
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <CreditCard className="h-5 w-5 text-purple-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">Billing</h2>
+              <p className="text-sm text-gray-600">Manage your payment methods and billing information</p>
+            </div>
+          </div>
 
-              <Button variant="outline">
-                <CreditCard className="h-4 w-4 mr-2" />
-                Add Payment Method
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Billing History</CardTitle>
-              <CardDescription>
-                View your past invoices and payments
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
+          <Card className="border-blue-200 bg-white/80 backdrop-blur">
+            <CardContent className="pt-6">
+              <div className="space-y-4">
+                <h3 className="font-medium text-gray-900">Billing History</h3>
+                <p className="text-sm text-gray-600">View your past invoices and payments</p>
+                <div className="flex items-center justify-between p-4 border border-blue-200 rounded-lg hover:bg-blue-50/50 transition-colors">
                   <div>
                     <p className="font-medium">Session Payment</p>
                     <p className="text-sm text-gray-600">Nov 1, 2024</p>
                   </div>
                   <div className="text-right">
                     <p className="font-medium">$100.00</p>
-                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                    <Badge className="bg-green-100 text-green-800 mt-1">
                       Paid
                     </Badge>
                   </div>
@@ -384,8 +334,9 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+        </div>
+        </div>
+      </div>
     </ClientLayout>
   );
 }
