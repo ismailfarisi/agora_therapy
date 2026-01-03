@@ -131,91 +131,110 @@ export default function SessionsPage() {
 
   return (
     <ClientLayout>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">My Sessions</h1>
-        <p className="text-lg text-gray-600">
-          View and manage your therapy sessions
-        </p>
-      </div>
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">My Sessions</h1>
+          <p className="text-gray-600 mt-2">
+            View and manage your therapy sessions
+          </p>
+        </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Total Sessions
-                </p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {appointments.length}
-                </p>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="border border-blue-200/60 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-2">
+                    Total Sessions
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {appointments.length}
+                  </p>
+                </div>
+                <div className="w-14 h-14 bg-gradient-to-br from-teal-400 to-teal-600 rounded-xl flex items-center justify-center shadow-md">
+                  <Video className="h-7 w-7 text-white" />
+                </div>
               </div>
-              <Video className="h-10 w-10 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Completed</p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {
-                    appointments.filter((apt) => apt.status === "completed")
-                      .length
-                  }
-                </p>
-              </div>
-              <CheckCircle className="h-10 w-10 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Upcoming</p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {
-                    appointments.filter(
-                      (apt) =>
-                        apt.status === "confirmed" &&
-                        (apt.scheduledFor as any)?.toDate?.() > new Date()
-                    ).length
-                  }
-                </p>
-              </div>
-              <Calendar className="h-10 w-10 text-orange-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Sessions List */}
-      <div className="space-y-4">
-        {appointments.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-12">
-              <Video className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No sessions yet
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Book your first therapy session to get started
-              </p>
-              <Button>Find a Therapist</Button>
             </CardContent>
           </Card>
-        ) : (
-          appointments.map((appointment) => {
-            const status = getSessionStatus(appointment);
-            const StatusIcon = status.icon;
 
-            return (
-              <Card key={appointment.id} className="hover:shadow-md transition-shadow">
+          <Card className="border border-blue-200/60 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-2">Completed</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {
+                      appointments.filter((apt) => apt.status === "completed")
+                        .length
+                    }
+                  </p>
+                </div>
+                <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center shadow-md">
+                  <CheckCircle className="h-7 w-7 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-blue-200/60 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-2">Upcoming</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {
+                      appointments.filter(
+                        (apt) =>
+                          apt.status === "confirmed" &&
+                          (apt.scheduledFor as any)?.toDate?.() > new Date()
+                      ).length
+                    }
+                  </p>
+                </div>
+                <div className="w-14 h-14 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center shadow-md">
+                  <Calendar className="h-7 w-7 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sessions List */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
+              <Video className="h-5 w-5 text-teal-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">All Sessions</h2>
+              <p className="text-sm text-gray-600">{appointments.length} total sessions</p>
+            </div>
+          </div>
+
+          {appointments.length === 0 ? (
+            <Card className="border border-blue-200/60 bg-white shadow-sm">
+              <CardContent className="text-center py-12">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Video className="h-8 w-8 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  No sessions yet
+                </h3>
+                <p className="text-gray-600 mb-6">
+                  Book your first therapy session to get started
+                </p>
+                <Button className="bg-teal-500 hover:bg-teal-600">Find a Therapist</Button>
+              </CardContent>
+            </Card>
+          ) : (
+            appointments.map((appointment) => {
+              const status = getSessionStatus(appointment);
+              const StatusIcon = status.icon;
+
+              return (
+                <Card key={appointment.id} className="border border-blue-200/60 bg-white shadow-sm hover:shadow-md transition-shadow">
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -287,13 +306,14 @@ export default function SessionsPage() {
                           <Button
                             onClick={() => handleJoinSession(appointment)}
                             variant="outline"
+                            className="border-blue-300 hover:bg-blue-50"
                           >
                             <Video className="h-4 w-4 mr-2" />
                             Join Session
                           </Button>
                         )}
                       {appointment.status === "completed" && (
-                        <Button variant="outline" disabled>
+                        <Button variant="outline" disabled className="border-gray-300">
                           <CheckCircle className="h-4 w-4 mr-2" />
                           Session Completed
                         </Button>
@@ -305,6 +325,7 @@ export default function SessionsPage() {
             );
           })
         )}
+        </div>
       </div>
     </ClientLayout>
   );

@@ -10,17 +10,16 @@ interface ClientLayoutProps {
 
 export function ClientLayout({ children }: ClientLayoutProps) {
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-teal-50 px-28">
       <Header />
-      <div className="flex pt-20 px-26">
-              <ClientSidebar />
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          {children}
-        </div>
-      </main>
+      <div className="flex h-screen pt-16">
+        <ClientSidebar />
+        <main className="flex-1 overflow-y-auto">
+          <div className="px-4 sm:px-6 lg:px-8 py-6">
+            {children}
+          </div>
+        </main>
       </div>
-
     </div>
   );
 }

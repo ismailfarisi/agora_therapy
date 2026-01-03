@@ -83,7 +83,7 @@ export function ClientSidebar() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-64  border-r border-blue-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static",
+          "fixed top-16 bottom-0 left-0 z-40 w-64 bg-gradient-to-b from-blue-50 to-cyan-50 border-r border-blue-200 transform transition-transform duration-200 ease-in-out lg:translate-x-0 lg:static lg:top-0",
           isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >

@@ -158,144 +158,170 @@ Thank you for choosing our services!
 
   return (
     <ClientLayout>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Invoices</h1>
-        <p className="text-lg text-gray-600">
-          View and download your payment invoices
-        </p>
-      </div>
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Invoices</h1>
+          <p className="text-gray-600 mt-2">
+            View and download your payment invoices
+          </p>
+        </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Total Invoices
-                </p>
-                <p className="text-3xl font-bold text-gray-900">
-                  {appointments.length}
-                </p>
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="border border-blue-200/60 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-2">
+                    Total Invoices
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {appointments.length}
+                  </p>
+                </div>
+                <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                  <FileText className="h-7 w-7 text-white" />
+                </div>
               </div>
-              <FileText className="h-10 w-10 text-blue-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Paid</p>
-                <p className="text-3xl font-bold text-green-600">
-                  ${totalPaid.toFixed(2)}
-                </p>
-              </div>
-              <CheckCircle className="h-10 w-10 text-green-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">
-                  Total Pending
-                </p>
-                <p className="text-3xl font-bold text-orange-600">
-                  ${totalPending.toFixed(2)}
-                </p>
-              </div>
-              <Clock className="h-10 w-10 text-orange-500" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Invoices List */}
-      <div className="space-y-4">
-        {appointments.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-12">
-              <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                No invoices yet
-              </h3>
-              <p className="text-gray-600">
-                Your payment invoices will appear here after booking sessions
-              </p>
             </CardContent>
           </Card>
-        ) : (
-          appointments.map((appointment) => {
-            const paymentStatus = getPaymentStatus(appointment.payment?.status);
-            const StatusIcon = paymentStatus.icon;
 
-            return (
-              <Card key={appointment.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="pt-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3">
-                        <FileText className="h-5 w-5 text-gray-600" />
-                        <div>
-                          <h3 className="font-semibold text-gray-900">
-                            Invoice #{appointment.id.substring(0, 8).toUpperCase()}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            {formatDate(appointment.scheduledFor)} at{" "}
-                            {formatTime(appointment.scheduledFor)}
-                          </p>
+          <Card className="border border-blue-200/60 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-2">Total Paid</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    ${totalPaid.toFixed(2)}
+                  </p>
+                </div>
+                <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center shadow-md">
+                  <CheckCircle className="h-7 w-7 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border border-blue-200/60 bg-white shadow-sm hover:shadow-lg transition-all duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 mb-2">
+                    Total Pending
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900">
+                    ${totalPending.toFixed(2)}
+                  </p>
+                </div>
+                <div className="w-14 h-14 bg-gradient-to-br from-orange-400 to-orange-600 rounded-xl flex items-center justify-center shadow-md">
+                  <Clock className="h-7 w-7 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Invoices List */}
+        <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <FileText className="h-5 w-5 text-purple-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">All Invoices</h2>
+              <p className="text-sm text-gray-600">{appointments.length} total invoices</p>
+            </div>
+          </div>
+
+          {appointments.length === 0 ? (
+            <Card className="border border-blue-200/60 bg-white shadow-sm">
+              <CardContent className="text-center py-12">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FileText className="h-8 w-8 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  No invoices yet
+                </h3>
+                <p className="text-gray-600">
+                  Your payment invoices will appear here after booking sessions
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            appointments.map((appointment) => {
+              const paymentStatus = getPaymentStatus(appointment.payment?.status);
+              const StatusIcon = paymentStatus.icon;
+
+              return (
+                <Card key={appointment.id} className="border border-blue-200/60 bg-white shadow-sm hover:shadow-md transition-shadow">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                      {/* Left Section - Invoice Details */}
+                      <div className="flex-1 space-y-4">
+                        {/* Header */}
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <FileText className="h-5 w-5 text-purple-600" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              Invoice #{appointment.id.substring(0, 8).toUpperCase()}
+                            </h3>
+                            <p className="text-sm text-gray-600 mt-1">
+                              {formatDate(appointment.scheduledFor)} at {formatTime(appointment.scheduledFor)}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Details Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pl-13">
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Therapist</p>
+                            <p className="font-medium text-gray-900">Dr. {appointment.therapistId}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Session Type</p>
+                            <p className="font-medium text-gray-900 capitalize">
+                              {appointment.session?.type || "Individual"}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Duration</p>
+                            <p className="font-medium text-gray-900">{appointment.duration} min</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Amount</p>
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg font-bold text-gray-900">
+                                ${appointment.payment?.amount || "100.00"}
+                              </span>
+                              <Badge className={paymentStatus.color}>
+                                <StatusIcon className="h-3 w-3 mr-1" />
+                                {paymentStatus.text}
+                              </Badge>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div>
-                          <p className="text-sm text-gray-600">Therapist</p>
-                          <p className="font-medium">Dr. {appointment.therapistId}</p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600">Session Type</p>
-                          <p className="font-medium capitalize">
-                            {appointment.session?.type || "Individual"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-sm text-gray-600">Duration</p>
-                          <p className="font-medium">{appointment.duration} minutes</p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="h-4 w-4 text-gray-600" />
-                          <span className="font-semibold text-lg">
-                            ${appointment.payment?.amount || "100.00"}
-                          </span>
-                        </div>
-                        <Badge className={paymentStatus.color}>
-                          <StatusIcon className="h-3 w-3 mr-1" />
-                          {paymentStatus.text}
-                        </Badge>
+                      {/* Right Section - Action Button */}
+                      <div className="flex lg:flex-col gap-2">
+                        <Button
+                          onClick={() => handleDownloadInvoice(appointment)}
+                          variant="outline"
+                          className="border-blue-300 hover:bg-blue-50 w-full lg:w-auto"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          Download
+                        </Button>
                       </div>
                     </div>
-
-                    <Button
-                      onClick={() => handleDownloadInvoice(appointment)}
-                      variant="outline"
-                      className="ml-4"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
             );
           })
         )}
+        </div>
       </div>
     </ClientLayout>
   );
