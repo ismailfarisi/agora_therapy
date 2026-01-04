@@ -526,14 +526,23 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
       case "basic-info":
         return (
           <div className="space-y-6">
-            {/* Warm Welcome Message */}
-            <div className="bg-gradient-to-r from-teal-50 to-blue-50 border border-teal-200 rounded-lg p-4">
-              <p className="text-sm text-gray-700 leading-relaxed">
-                <span className="text-lg">🌸</span> <strong>Welcome to your healing journey.</strong> We're so glad you're here. 
-                This is a safe, judgment-free space where your well-being comes first. Take your time filling this out - 
-                there's no rush, and you can always update your information later.
-              </p>
-            </div>
+            {/* Welcome Message - Different for Client vs Therapist */}
+            {!isTherapist ? (
+              <div className="bg-gradient-to-r from-teal-50 to-blue-50 border border-teal-200 rounded-lg p-4">
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  <span className="text-lg">🌸</span> <strong>Welcome to your healing journey.</strong> We're so glad you're here. 
+                  This is a safe, judgment-free space where your well-being comes first. Take your time filling this out - 
+                  there's no rush, and you can always update your information later.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-gradient-to-r from-teal-50 to-blue-50 border border-teal-200 rounded-lg p-4">
+                <p className="text-sm text-gray-700 leading-relaxed">
+                  <span className="text-lg">👋</span> <strong>Welcome to MindGood.</strong> Let's set up your professional profile. 
+                  This information will help clients find and connect with you. You can update these details anytime from your profile settings.
+                </p>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -544,9 +553,11 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
                   onChange={(e) => updateBasicInfo("firstName", e.target.value)}
                   placeholder="Enter your first name"
                 />
-                <p className="text-xs text-gray-500 italic">
-                  💭 Feel free to use any name you're comfortable with - it doesn't have to be your real name
-                </p>
+                {!isTherapist && (
+                  <p className="text-xs text-gray-500 italic">
+                    💭 Feel free to use any name you're comfortable with - it doesn't have to be your real name
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="lastName">
@@ -569,9 +580,11 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
                 onChange={(e) => updateBasicInfo("displayName", e.target.value)}
                 placeholder="How would you like to be addressed?"
               />
-              <p className="text-xs text-gray-500 italic">
-                ✨ This is how we'll greet you - choose what makes you feel most comfortable
-              </p>
+              {!isTherapist && (
+                <p className="text-xs text-gray-500 italic">
+                  ✨ This is how we'll greet you - choose what makes you feel most comfortable
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -583,9 +596,11 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
                 onChange={(e) => updateBasicInfo("phoneNumber", e.target.value)}
                 placeholder="+1 (555) 123-4567"
               />
-              <p className="text-xs text-gray-500 italic">
-                📱 Only if you'd like appointment reminders via text - completely optional
-              </p>
+              {!isTherapist && (
+                <p className="text-xs text-gray-500 italic">
+                  📱 Only if you'd like appointment reminders via text - completely optional
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -603,20 +618,24 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
                   <SelectItem value="prefer-not-to-say">Prefer not to say</SelectItem>
                 </SelectContent>
               </Select>
-              {data.basicInfo.gender === "male" && (
-                <p className="text-xs text-teal-600 italic flex items-center gap-1">
-                  💙 We're here to support you on your journey to wellness
-                </p>
-              )}
-              {data.basicInfo.gender === "female" && (
-                <p className="text-xs text-pink-600 italic flex items-center gap-1">
-                  💗 Your mental health matters, and we're honored to be part of your journey
-                </p>
-              )}
-              {data.basicInfo.gender === "prefer-not-to-say" && (
-                <p className="text-xs text-purple-600 italic flex items-center gap-1">
-                  💜 Your privacy is important to us - we're here for you, no matter what
-                </p>
+              {!isTherapist && (
+                <>
+                  {data.basicInfo.gender === "male" && (
+                    <p className="text-xs text-teal-600 italic flex items-center gap-1">
+                      💙 We're here to support you on your journey to wellness
+                    </p>
+                  )}
+                  {data.basicInfo.gender === "female" && (
+                    <p className="text-xs text-pink-600 italic flex items-center gap-1">
+                      💗 Your mental health matters, and we're honored to be part of your journey
+                    </p>
+                  )}
+                  {data.basicInfo.gender === "prefer-not-to-say" && (
+                    <p className="text-xs text-purple-600 italic flex items-center gap-1">
+                      💜 Your privacy is important to us - we're here for you, no matter what
+                    </p>
+                  )}
+                </>
               )}
             </div>
 
@@ -645,9 +664,11 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-gray-500 italic">
-                  🌍 Helps us schedule sessions at times that work best for you
-                </p>
+                {!isTherapist && (
+                  <p className="text-xs text-gray-500 italic">
+                    🌍 Helps us schedule sessions at times that work best for you
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2 md:col-span-2">
@@ -900,7 +921,7 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
                   type="number"
                   min="0"
                   value={data.therapistProfile.availability.bufferMinutes}
-                  onChange={(e) => updateTherapistAvailability("bufferMinutes", parseInt(e.target.value) || 15)}
+                  onChange={(e) => updateTherapistAvailability("bufferMinutes", e.target.value === '' ? 15 : parseInt(e.target.value))}
                 />
               </div>
             </div>
@@ -1052,40 +1073,76 @@ export function OnboardingWizard({ user, onComplete }: OnboardingWizardProps) {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative">
       <div className="w-full max-w-3xl relative z-10">
-        {/* Joyful Header with Sunshine Theme */}
-        <div className="text-center mb-8 animate-fade-in">
-          <div className="inline-block mb-4 relative">
-            <div className="text-7xl animate-bounce-slow">🌻</div>
-            <div className="absolute -top-2 -right-2 text-3xl animate-spin-slow">☀️</div>
+        {/* Header - Different for Client vs Therapist */}
+        {!isTherapist ? (
+          <div className="text-center mb-8 animate-fade-in">
+            <div className="inline-block mb-4 relative">
+              <div className="text-7xl animate-bounce-slow">🌻</div>
+              <div className="absolute -top-2 -right-2 text-3xl animate-spin-slow">☀️</div>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-amber-500 via-pink-500 to-purple-500 bg-clip-text text-transparent mb-3 animate-fade-in-up">
+              Welcome to Your Happy Place! 🌈
+            </h1>
+            <p className="text-lg text-gray-700 max-w-xl mx-auto leading-relaxed">
+              ✨ Let's create your personal garden of wellness together - one beautiful step at a time
+            </p>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-amber-500 via-pink-500 to-purple-500 bg-clip-text text-transparent mb-3 animate-fade-in-up">
-            Welcome to Your Happy Place! 🌈
-          </h1>
-          <p className="text-lg text-gray-700 max-w-xl mx-auto leading-relaxed">
-            ✨ Let's create your personal garden of wellness together - one beautiful step at a time
-          </p>
-        </div>
+        ) : (
+          <div className="text-center mb-8 animate-fade-in">
+            <div className="inline-block mb-4 relative">
+              <div className="text-6xl animate-bounce-slow">🎯</div>
+            </div>
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3 animate-fade-in-up">
+              Welcome to MindGood
+            </h1>
+            <p className="text-lg text-gray-700 max-w-xl mx-auto leading-relaxed">
+              Let's set up your professional profile and get you ready to help clients
+            </p>
+          </div>
+        )}
 
-        {/* Vibrant Progress Bar */}
-        <div className="mb-8 bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 border-amber-200">
-          <div className="flex justify-between items-center mb-3">
-            <span className="text-sm font-semibold text-gray-800 flex items-center gap-2">
-              <span className="text-xl">🌱</span>
-              Growing: Step {currentStep + 1} of {steps.length}
-            </span>
-            <span className="text-sm font-semibold bg-gradient-to-r from-amber-500 to-pink-500 bg-clip-text text-transparent">
-              {progress}% Blooming! 🌸
-            </span>
-          </div>
-          <div className="relative h-3 bg-gradient-to-r from-gray-200 to-gray-100 rounded-full overflow-hidden">
-            <div 
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-amber-400 via-pink-400 to-purple-400 rounded-full transition-all duration-500 ease-out shadow-lg"
-              style={{ width: `${progress}%` }}
-            >
-              <div className="absolute inset-0 bg-white/30 animate-shimmer"></div>
+        {/* Progress Bar - Different styling for Client vs Therapist */}
+        {!isTherapist ? (
+          <div className="mb-8 bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 border-amber-200">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <span className="text-xl">🌱</span>
+                Growing: Step {currentStep + 1} of {steps.length}
+              </span>
+              <span className="text-sm font-semibold bg-gradient-to-r from-amber-500 to-pink-500 bg-clip-text text-transparent">
+                {progress}% Blooming! 🌸
+              </span>
+            </div>
+            <div className="relative h-3 bg-gradient-to-r from-gray-200 to-gray-100 rounded-full overflow-hidden">
+              <div 
+                className="absolute inset-y-0 left-0 bg-gradient-to-r from-amber-400 via-pink-400 to-purple-400 rounded-full transition-all duration-500 ease-out shadow-lg"
+                style={{ width: `${progress}%` }}
+              >
+                <div className="absolute inset-0 bg-white/30 animate-shimmer"></div>
+              </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="mb-8 bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border-2 border-blue-200">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                <span className="text-xl">📋</span>
+                Step {currentStep + 1} of {steps.length}
+              </span>
+              <span className="text-sm font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                {progress}% Complete
+              </span>
+            </div>
+            <div className="relative h-3 bg-gradient-to-r from-gray-200 to-gray-100 rounded-full overflow-hidden">
+              <div 
+                className="absolute inset-y-0 left-0 bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-full transition-all duration-500 ease-out shadow-lg"
+                style={{ width: `${progress}%` }}
+              >
+                <div className="absolute inset-0 bg-white/30 animate-shimmer"></div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Joyful Steps Navigation */}
         <div className="flex justify-center mb-8">
