@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { AVAILABLE_SERVICES, SERVICE_CATEGORIES } from "@/types/models/service";
 import {
   User,
   Briefcase,
@@ -23,6 +24,10 @@ import {
   CheckCircle,
   AlertCircle,
   RefreshCw,
+  Plus,
+  X,
+  CheckCircle2,
+  Circle,
 } from "lucide-react";
 
 interface TherapistProfileResponse {
@@ -58,6 +63,7 @@ interface TherapistProfileResponse {
   };
   therapistProfile?: {
     photoURL?: string;
+    services?: string[];
     credentials?: {
       licenseNumber: string;
       licenseState: string;
@@ -93,6 +99,8 @@ export default function TherapistSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [activeServiceCategory, setActiveServiceCategory] = useState<string>("all");
 
   // Form states
   const [formData, setFormData] = useState({
@@ -139,10 +147,14 @@ export default function TherapistSettingsPage() {
           profile.therapistProfile?.availability?.advanceBookingDays || 30,
       });
       
+      // Set services
+      setSelectedServices(profile.therapistProfile?.services || []);
+      
       console.log("✅ Form data set:", {
         name: fullName,
         phone: profile.profile?.phoneNumber,
         hasTherapistProfile: !!profile.therapistProfile,
+        services: profile.therapistProfile?.services,
       });
     }
   }, [profile]);
@@ -196,6 +208,7 @@ export default function TherapistSettingsPage() {
       const updateData = {
         name: formData.name,
         phone: formData.phone,
+        "therapistProfile.services": selectedServices,
         "therapistProfile.practice.bio": formData.bio,
         "therapistProfile.practice.yearsExperience": formData.yearsExperience,
         "therapistProfile.practice.hourlyRate": formData.hourlyRate,
@@ -226,6 +239,18 @@ export default function TherapistSettingsPage() {
       setSaving(false);
     }
   };
+
+  const toggleService = (serviceId: string) => {
+    if (selectedServices.includes(serviceId)) {
+      setSelectedServices(selectedServices.filter((id) => id !== serviceId));
+    } else {
+      setSelectedServices([...selectedServices, serviceId]);
+    }
+  };
+
+  const filteredServices = activeServiceCategory === "all"
+    ? AVAILABLE_SERVICES
+    : AVAILABLE_SERVICES.filter((s) => s.category === activeServiceCategory);
 
   if (authLoading || loading) {
     return (
@@ -487,6 +512,86 @@ export default function TherapistSettingsPage() {
                   )}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Services Card */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Services Offered</CardTitle>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Select the services you provide to clients
+                  </p>
+                </div>
+                <Badge variant="secondary">
+                  {selectedServices.length} selected
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Category Filter */}
+              <div className="flex flex-wrap gap-2">
+                <Badge
+                  variant={activeServiceCategory === "all" ? "default" : "outline"}
+                  className="cursor-pointer"
+                  onClick={() => setActiveServiceCategory("all")}
+                >
+                  All Services
+                </Badge>
+                {SERVICE_CATEGORIES.map((cat) => (
+                  <Badge
+                    key={cat.value}
+                    variant={activeServiceCategory === cat.value ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => setActiveServiceCategory(cat.value)}
+                  >
+                    {cat.label}
+                  </Badge>
+                ))}
+              </div>
+
+              {/* Services Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto p-2">
+                {filteredServices.map((service) => {
+                  const isSelected = selectedServices.includes(service.id);
+                  return (
+                    <div
+                      key={service.id}
+                      onClick={() => toggleService(service.id)}
+                      className={`
+                        p-4 rounded-lg border-2 cursor-pointer transition-all
+                        ${
+                          isSelected
+                            ? "border-blue-500 bg-blue-50"
+                            : "border-gray-200 hover:border-gray-300 bg-white"
+                        }
+                      `}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="mt-0.5">
+                          {isSelected ? (
+                            <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                          ) : (
+                            <Circle className="h-5 w-5 text-gray-400" />
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-gray-900">{service.name}</h4>
+                          <p className="text-sm text-gray-600 mt-1">{service.description}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {selectedServices.length === 0 && (
+                <div className="text-center text-sm text-amber-600 bg-amber-50 p-3 rounded-lg">
+                  Please select at least one service
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

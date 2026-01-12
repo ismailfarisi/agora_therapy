@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { TherapistLayout } from "@/components/therapist/TherapistLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useToast } from "@/lib/hooks/useToast";
 import {
@@ -18,11 +17,15 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { WeeklyHoursEditor } from "@/components/availability/WeeklyHoursEditor";
-import { DateSpecificHoursModal } from "@/components/availability/DateSpecificHoursModal";
+import { ScheduleOverrides } from "@/components/schedule/ScheduleOverrides";
+import { AvailabilityCalendar } from "@/components/availability/AvailabilityCalendar";
 import { AvailabilityService } from "@/lib/services/availability-service";
 import { TimeSlotService } from "@/lib/services/timeslot-service";
+import { ProfileService } from "@/lib/services/profile-service";
 import { TimeSlot, TherapistAvailability } from "@/types/database";
-import { Timestamp } from "firebase/firestore";
+import { Timestamp, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { documents } from "@/lib/firebase/collections";
+import { cn } from "@/lib/utils";
 
 interface TimeRange {
   start: string;
@@ -42,7 +45,8 @@ interface DateOverride {
 export default function TherapistAvailabilityPage() {
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [showDateModal, setShowDateModal] = useState(false);
+  const [scheduleOverrides, setScheduleOverrides] = useState<any[]>([]);
+  const [activeView, setActiveView] = useState<"schedule" | "calendar">("schedule");
   const { toast } = useToast();
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
 
@@ -55,7 +59,7 @@ export default function TherapistAvailabilityPage() {
     5: [{ start: "09:00", end: "17:00" }],
   });
 
-  // Date-specific overrides
+  // Date-specific overrides (kept for backward compatibility with stats)
   const [dateOverrides, setDateOverrides] = useState<DateOverride[]>([]);
 
   // Load existing availability and time slots
@@ -70,17 +74,24 @@ export default function TherapistAvailabilityPage() {
         const slots = await TimeSlotService.getTimeSlots();
         setTimeSlots(slots);
 
-        // Load existing availability
-        const availability = await AvailabilityService.getTherapistAvailability(user.uid);
+        // Load existing availability from therapistProfile
+        const therapistProfileRef = documents.therapistProfile(user.uid);
+        const therapistProfileDoc = await getDoc(therapistProfileRef);
         
-        // Convert availability records to weekly hours format
-        if (availability.length > 0) {
-          const converted = convertAvailabilityToWeeklyHours(availability, slots);
-          setWeeklyHours(converted);
+        if (therapistProfileDoc.exists()) {
+          const profileData = therapistProfileDoc.data();
+          const savedWeeklyHours = profileData?.availability?.weeklyHours;
+          
+          if (savedWeeklyHours && Object.keys(savedWeeklyHours).length > 0) {
+            setWeeklyHours(savedWeeklyHours);
+          }
         }
 
         // Load schedule overrides
         const overrides = await AvailabilityService.getScheduleOverrides(user.uid);
+        setScheduleOverrides(overrides);
+        
+        // Convert for stats display
         const convertedOverrides = overrides.map(override => ({
           id: override.id,
           date: (override.date as Timestamp).toDate(),
@@ -114,28 +125,12 @@ export default function TherapistAvailabilityPage() {
     try {
       setLoading(true);
 
-      // Convert weekly hours to time slot IDs
-      const weeklySchedule: { [dayOfWeek: number]: string[] } = {};
-      
-      for (const [dayStr, ranges] of Object.entries(weeklyHours)) {
-        const dayOfWeek = parseInt(dayStr);
-        const slotIds: string[] = [];
-
-        for (const range of ranges) {
-          // Find all time slots that fall within this range
-          const matchingSlots = timeSlots.filter(slot => {
-            return slot.startTime >= range.start && slot.endTime <= range.end;
-          });
-          slotIds.push(...matchingSlots.map(s => s.id));
-        }
-
-        if (slotIds.length > 0) {
-          weeklySchedule[dayOfWeek] = slotIds;
-        }
-      }
-
-      // Save to backend
-      await AvailabilityService.setWeeklySchedule(user.uid, weeklySchedule);
+      // Save weeklyHours directly to therapistProfile
+      const therapistProfileRef = documents.therapistProfile(user.uid);
+      await updateDoc(therapistProfileRef, {
+        "availability.weeklyHours": weeklyHours,
+        "metadata.updatedAt": serverTimestamp(),
+      });
       
       toast.success(
         "Availability Updated",
@@ -152,118 +147,69 @@ export default function TherapistAvailabilityPage() {
     }
   };
 
-  // Helper function to convert availability records to weekly hours
-  const convertAvailabilityToWeeklyHours = (
-    availability: TherapistAvailability[],
-    slots: TimeSlot[]
-  ): WeeklyHours => {
-    const weeklyHours: WeeklyHours = {};
-
-    // Group by day of week
-    const byDay: { [day: number]: string[] } = {};
-    availability.forEach(av => {
-      if (!byDay[av.dayOfWeek]) {
-        byDay[av.dayOfWeek] = [];
-      }
-      byDay[av.dayOfWeek].push(av.timeSlotId);
-    });
-
-    // Convert to time ranges
-    for (const [dayStr, slotIds] of Object.entries(byDay)) {
-      const day = parseInt(dayStr);
-      const daySlots = slotIds
-        .map(id => slots.find(s => s.id === id))
-        .filter(Boolean)
-        .sort((a, b) => (a!.startTime || "").localeCompare(b!.startTime || ""));
-
-      if (daySlots.length > 0) {
-        // Group consecutive slots into ranges
-        const ranges: TimeRange[] = [];
-        let currentRange: TimeRange | null = null;
-
-        for (const slot of daySlots) {
-          if (!slot) continue;
-
-          if (!currentRange) {
-            currentRange = { start: slot.startTime, end: slot.endTime };
-          } else if (currentRange.end === slot.startTime) {
-            // Extend current range
-            currentRange.end = slot.endTime;
-          } else {
-            // Start new range
-            ranges.push(currentRange);
-            currentRange = { start: slot.startTime, end: slot.endTime };
-          }
-        }
-
-        if (currentRange) {
-          ranges.push(currentRange);
-        }
-
-        weeklyHours[day] = ranges;
-      }
-    }
-
-    return weeklyHours;
-  };
-
-  const handleApplyDateOverride = async (dates: Date[], hours: TimeRange[]) => {
+  const handleCreateOverride = async (override: any) => {
     if (!user?.uid) {
       toast.error("Error", "User not authenticated");
       return;
     }
 
     try {
-      // Convert time ranges to slot IDs
-      const slotIds: string[] = [];
-      for (const range of hours) {
-        const matchingSlots = timeSlots.filter(slot => {
-          return slot.startTime >= range.start && slot.endTime <= range.end;
-        });
-        slotIds.push(...matchingSlots.map(s => s.id));
-      }
+      const overrideId = await AvailabilityService.createScheduleOverride({
+        ...override,
+        therapistId: user.uid,
+        metadata: {
+          createdAt: Timestamp.now(),
+          updatedAt: Timestamp.now(),
+          notes: override.metadata?.notes || ""
+        }
+      });
 
-      // Create overrides for each date
-      const newOverrides: DateOverride[] = [];
-      for (const date of dates) {
-        const overrideId = await AvailabilityService.createScheduleOverride({
-          therapistId: user.uid,
-          date: Timestamp.fromDate(date),
-          type: "custom_hours",
-          reason: "Custom hours for specific date",
-          affectedSlots: slotIds,
-          isRecurring: false,
-          metadata: {
-            createdAt: Timestamp.now(),
-            updatedAt: Timestamp.now(),
-            notes: "Custom hours for specific date"
-          }
-        });
-
-        newOverrides.push({
-          id: overrideId,
-          date,
-          hours: [...hours]
-        });
-      }
-
-      setDateOverrides([...dateOverrides, ...newOverrides]);
+      // Reload overrides
+      const overrides = await AvailabilityService.getScheduleOverrides(user.uid);
+      setScheduleOverrides(overrides);
       
       toast.success(
-        "Date Override Added",
-        `Added specific hours for ${dates.length} date${dates.length !== 1 ? 's' : ''}`
+        "Override Created",
+        "Schedule override has been added successfully"
       );
     } catch (error) {
-      console.error("Error creating date override:", error);
-      toast.error("Failed", "Failed to create date override");
+      console.error("Error creating override:", error);
+      toast.error("Failed", "Failed to create override");
+    }
+  };
+
+  const handleUpdateOverride = async (id: string, updates: any) => {
+    if (!user?.uid) return;
+    
+    try {
+      await AvailabilityService.updateScheduleOverride(id, updates);
+      
+      // Reload overrides
+      const overrides = await AvailabilityService.getScheduleOverrides(user.uid);
+      setScheduleOverrides(overrides);
+      
+      toast.success(
+        "Override Updated",
+        "Schedule override has been updated successfully"
+      );
+    } catch (error) {
+      console.error("Error updating override:", error);
+      toast.error("Failed", "Failed to update override");
     }
   };
 
   const handleDeleteOverride = async (id: string) => {
+    if (!user?.uid) return;
+    
     try {
       await AvailabilityService.deleteScheduleOverride(id);
+      
+      // Reload overrides
+      const overrides = await AvailabilityService.getScheduleOverrides(user.uid);
+      setScheduleOverrides(overrides);
       setDateOverrides(dateOverrides.filter((o) => o.id !== id));
-      toast.success("Override Deleted", "Date-specific hours have been removed");
+      
+      toast.success("Override Deleted", "Schedule override has been removed");
     } catch (error) {
       console.error("Error deleting override:", error);
       toast.error("Failed", "Failed to delete override");
@@ -366,96 +312,76 @@ export default function TherapistAvailabilityPage() {
         </Card>
       </div>
 
+      {/* View Toggle */}
+      <div className="mb-6">
+        <div className="inline-flex rounded-lg border border-gray-200 p-1 bg-white">
+          <button
+            onClick={() => setActiveView("schedule")}
+            className={cn(
+              "px-4 py-2 rounded-md text-sm font-medium transition-all",
+              activeView === "schedule"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            )}
+          >
+            Schedule Editor
+          </button>
+          <button
+            onClick={() => setActiveView("calendar")}
+            className={cn(
+              "px-4 py-2 rounded-md text-sm font-medium transition-all",
+              activeView === "calendar"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-gray-600 hover:text-gray-900"
+            )}
+          >
+            Calendar View
+          </button>
+        </div>
+      </div>
+
       {/* Main Content */}
       <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Working hours (default)</CardTitle>
-                <p className="text-sm text-gray-600 mt-1">
-                  Set your weekly availability schedule
-                </p>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-start gap-6">
-              {/* Weekly Hours Section */}
-              <div className="flex-1">
+        {activeView === "schedule" ? (
+          <>
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Working hours (default)</CardTitle>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Set your weekly availability schedule
+                    </p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
                 <WeeklyHoursEditor
                   weeklyHours={weeklyHours}
                   onChange={setWeeklyHours}
                 />
-              </div>
+              </CardContent>
+            </Card>
 
-              {/* Date-specific Hours Section */}
-              <div className="w-80">
-                <Card className="border-2 border-dashed border-gray-300">
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-3 mb-4">
-                      <CalendarDays className="h-5 w-5 text-gray-600 mt-1" />
-                      <div>
-                        <h3 className="font-semibold text-gray-900 mb-1">
-                          Date-specific hours
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          Adjust hours for specific days
-                        </p>
-                      </div>
-                    </div>
-
-                    <Button
-                      onClick={() => setShowDateModal(true)}
-                      className="w-full"
-                      variant="outline"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add hours
-                    </Button>
-
-                    {/* List of overrides */}
-                    {dateOverrides.length > 0 && (
-                      <div className="mt-4 space-y-2">
-                        <p className="text-xs font-medium text-gray-600 uppercase">
-                          Overrides ({dateOverrides.length})
-                        </p>
-                        {dateOverrides.map((override) => (
-                          <div
-                            key={override.id}
-                            className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200"
-                          >
-                            <div>
-                              <p className="text-sm font-medium text-gray-900">
-                                {override.date.toLocaleDateString("en-US", {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                })}
-                              </p>
-                              <p className="text-xs text-gray-600">
-                                {override.hours
-                                  .map((h) => `${h.start}-${h.end}`)
-                                  .join(", ")}
-                              </p>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteOverride(override.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            {/* Schedule Overrides Section */}
+            <ScheduleOverrides
+              overrides={scheduleOverrides}
+              timeSlots={timeSlots}
+              onCreateOverride={handleCreateOverride}
+              onUpdateOverride={handleUpdateOverride}
+              onDeleteOverride={handleDeleteOverride}
+            />
+          </>
+        ) : (
+          <AvailabilityCalendar
+            weeklyHours={weeklyHours}
+            overrides={scheduleOverrides}
+            onDayClick={(date) => {
+              console.log("Day clicked:", date);
+              // Could open a modal to show/edit details for this day
+            }}
+          />
+        )}
 
         {/* Save Button */}
         <div className="flex justify-end">
@@ -480,12 +406,6 @@ export default function TherapistAvailabilityPage() {
         </div>
       </div>
 
-      {/* Date-specific Hours Modal */}
-      <DateSpecificHoursModal
-        open={showDateModal}
-        onClose={() => setShowDateModal(false)}
-        onApply={handleApplyDateOverride}
-      />
     </TherapistLayout>
   );
 }

@@ -29,11 +29,7 @@ const menuItems = [
     href: "/therapist/appointments",
     icon: Clock,
   },
-  {
-    name: "My Schedule",
-    href: "/therapist/schedule",
-    icon: Calendar,
-  },
+
   {
     name: "My Availability",
     href: "/therapist/availability",

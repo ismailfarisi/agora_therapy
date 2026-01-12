@@ -28,6 +28,8 @@ export class TimeSlotService {
       const q = query(collections.timeSlots(), orderBy("sortOrder", "asc"));
       const snapshot = await getDocs(q);
 
+      console.log("Time slots:", snapshot.docs);
+
       return snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
